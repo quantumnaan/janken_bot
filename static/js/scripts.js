@@ -7,6 +7,8 @@ let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
 let draws = 0;
+let next_choice = 0;
+var socket = io();
 
 const handImages = {
     "グー": "static/img/janken_gu.png",
@@ -20,7 +22,7 @@ resetGame();
 
 function playGame(playerChoice) {
 
-    const computerChoice = choices[Math.floor(Math.random() * 3)];
+    let computerChoice = next_choice;
     let result = '';
     if (playerChoice === computerChoice) {
         result = '引き分け';
@@ -36,10 +38,13 @@ function playGame(playerChoice) {
         result = '負け';
         loses += 1
     }
-
     
+    let sum = wins + loses + draws;
     gameResults.push([opponentID, string2number(playerChoice), string2number(computerChoice), string2number(result)]);
-    document.getElementById("scores").innerHTML = `勝ち: ${wins}/${maxCount}, 負け: ${loses}/${maxCount}, 引き分け: ${draws}/${maxCount}`;
+    document.getElementById("scores").innerHTML = `
+        勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
+        負け: ${parseInt(100*parseFloat(loses)/sum)}%, 
+        引き分け: ${parseInt(100*parseFloat(draws)/sum)}%`;
     document.getElementById("player-hand").src = handImages[playerChoice];
     document.getElementById("computer-hand").src = handImages[computerChoice];
     document.getElementById("wld").innerHTML = result;
@@ -49,6 +54,16 @@ function playGame(playerChoice) {
 
         alert("勝負が終了しました．リセットします．");
     }
+
+    chooseNext(playerChoice);
+    console.log(next_choice);
+}
+
+function chooseNext(playerChoice) {
+    socket.emit('choose', string2number(playerChoice), 
+        function(response) {
+            next_choice = number2string(response);
+    });
 }
 
 
@@ -66,6 +81,9 @@ function resetGame() {
     document.getElementById("player-hand").src = questionImage;
     document.getElementById("computer-hand").src = questionImage;
     document.getElementById("wld").innerHTML = "";
+    socket.emit('reset');
+    socket.emit('save_data');
+    next_choice = 0;
 }
 
 function string2number(str) {
@@ -83,6 +101,15 @@ function string2number(str) {
         return 0;
     } else if (str === "負け") {
         return -1;
+    }
+}
+function number2string(num) {
+    if (num === 0) {
+        return "グー";
+    } else if (num === 1) {
+        return "チョキ";
+    } else if (num === 2) {
+        return "パー";
     }
 }
 
@@ -106,14 +133,3 @@ function sendResultsToSheet() {
         console.error("fetch エラー:", error);
     });
 }
-
-document.addEventListener("keydown", function(event) {
-    console.log("Key pressed: ", event.key);    
-    if (event.key === "ArrowLeft") {
-        playGame("グー");
-    } else if (event.key === "ArrowDown") {
-        playGame("チョキ");
-    } else if (event.key === "ArrowRight") {
-        playGame("パー");
-    }
-});

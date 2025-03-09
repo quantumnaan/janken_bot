@@ -17,7 +17,7 @@ class BayesEstimation:
     self.mu = ca.DM.zeros(3)
     self.Sig, self.mu = self._load_params()
     self.Sig_inv = ca.inv(self.Sig)
-    self.transmat = self._load_transmat()
+    self.transmat = self._load_transmat() # th -> janken_prob
     
     self.th = ca.MX.sym("th", 3)
     
@@ -30,8 +30,9 @@ class BayesEstimation:
 
   def log_model(self, th:ca.MX, x:np.ndarray) -> ca.MX:
     ja_prob = self.transmat @ th
-    ja_prob = ca.fmax(ja_prob, 0)
-    ja_prob /= ca.sum1(ja_prob)
+    ja_prob = ca.fmax(ja_prob, 1e-6)
+    # ja_prob = ja_prob / ca.sum1(ja_prob)
+    # TODO: モデルに応じた適切な確率の標準化を行う
     ret = ca.MX(0)
     for i in range(len(x)):
       ret -= ca.log(ja_prob[x[i]])
@@ -42,7 +43,11 @@ class BayesEstimation:
     
   def estimate(self, x: np.ndarray) -> np.ndarray:
     warm_start = {"x0": self.sol["x"]}
-    likelihood = self.log_model(self.th, x) + self.log_pi(self.th)
+    
+    if(x.shape[0] == 0):
+      likelihood = self.log_pi(self.th)
+    else:
+      likelihood = self.log_model(self.th, x) + self.log_pi(self.th)
     
     nlp = {"x": self.th, "f": likelihood}
     
@@ -50,7 +55,7 @@ class BayesEstimation:
     solver = ca.nlpsol("solver", "ipopt", nlp, opts)
     
     self.sol = solver(**warm_start)
-    return self.sol["x"]
+    return self.transmat @ self.sol["x"]
   
   def _load_params(self):
     with open(self.file_param, "rb") as f:

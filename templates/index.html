@@ -43,6 +43,7 @@
     <script src="{{url_for('static', filename='js/scripts.js') }}"></script> <!-- クライアント側JavaScript -->
 
 
+
 </head>
 
 <body>
@@ -74,6 +75,19 @@
         </div>
     </div>
     
+    <script>
+        
+        document.addEventListener("keydown", function(event) {
+            console.log("Key pressed: ", event.key);    
+            if (event.key === "ArrowLeft") {
+                playGame("グー");
+            } else if (event.key === "ArrowDown") {
+                playGame("チョキ");
+            } else if (event.key === "ArrowRight") {
+                playGame("パー");
+            }
+        });
 
+    </script>
 </body>
 </html>
