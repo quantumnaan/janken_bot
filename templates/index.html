@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>じゃんけんゲーム</title>
+    <style>
+        button { margin: 5px; padding: 10px; font-size: 16px; }
+        .game-container {
+            display: flex;
+            width: 80%;
+            margin: auto;
+        }
+        .left-panel {
+            width: 50%;
+            padding: 20px;
+            text-align: center;
+        }
+        .right-panel {
+            width: 50%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .hands {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+        }
+        .hands img {
+            width: 120px;
+            height: 120px;
+        }    
+        .rotate-image {
+            transform: rotate(180deg);
+        }
+    </style>
+    
+    <script src="https://cdn.socket.io/4.1.3/socket.io.min.js"></script> <!-- Socket.IO CDN -->
+    <script src="{{url_for('static', filename='js/scripts.js') }}"></script> <!-- クライアント側JavaScript -->
+
+
+</head>
+
+<body>
+    
+    <div class="game-container">
+        <div class="left-panel">
+            <h1>じゃんけんゲーム</h1>
+            <h3>成績</h3>
+            <ul id="scores"></ul>
+            <p>ボタン入力:</p>
+            <button onclick="playGame('グー')">グー</button>
+            <button onclick="playGame('チョキ')">チョキ</button>
+            <button onclick="playGame('パー')">パー</button>
+            <p>キーボード入力: ←: グー | ↓: チョキ | →: パー</p>
+        </div>
+    
+        <div class="right-panel">
+            <div class="hands">
+                <div>
+                    <p>相手の手</p>
+                    <img id="computer-hand" src="static/img/mark_question.png" alt="相手の手" class="rotate-image">
+                </div>
+                <ul id="wld"></ul>
+                <div>
+                    <img id="player-hand" src="static/img/mark_question.png" alt="あなたの手">
+                    <p>あなたの手</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+</body>
+</html>
