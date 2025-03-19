@@ -6,6 +6,10 @@ import os
 file_param = "./data/params.pkl"
 file_mat = "./data/transmat.pkl"
 
+# NP:パラメータ数，NS:状態数
+NP = 5
+NS = 6
+
 class BayesEstimation:
   def __init__(self):
     assert os.path.exists(file_param), f"File {file_param} does not exist"
@@ -13,26 +17,31 @@ class BayesEstimation:
     self.file_param = file_param
     self.file_mat = file_mat
     
-    self.Sig = ca.DM.zeros(3, 3)
-    self.mu = ca.DM.zeros(3)
-    self.Sig, self.mu = self._load_params()
+    self.Sig = ca.DM.zeros(NP, NP)
+    self.mu = ca.DM.zeros(NP)
     self.Sig_inv = ca.inv(self.Sig)
-    self.transmat = self._load_transmat() # th -> janken_prob
+    self.transmat = ca.DM.zeros(3, NS, NP)
     
-    self.th = ca.MX.sym("th", 3)
+    self.th = ca.MX.sym("th", NP)
     
     likelihood = self.log_pi(self.th)
-    nlp = {"x": self.th, "f": likelihood}
+    nlp = {"x": self.th, "f": likelihood, "p": ca.MX.sym('P', 3, NS, NP)}
     opts = {"print_time": False, "ipopt.print_level": 0}
-    solver = ca.nlpsol("solver", "ipopt", nlp, opts)
-    self.sol = solver()
+    self.solver = ca.nlpsol("solver", "ipopt", nlp, opts)
+    self.sol = self.solver()
     
+  def set_param(self, mu, Sigma):
+    self.mu = mu
+    self.Sig = Sigma
+    self.Sig_inv = ca.inv(self.Sig)
+    
+  def set_transmat(self, transmat):
+    self.transmat = transmat    
 
   def log_model(self, th:ca.MX, x:np.ndarray) -> ca.MX:
     ja_prob = self.transmat @ th
-    ja_prob = ca.fmax(ja_prob, 1e-6)
-    # ja_prob = ja_prob / ca.sum1(ja_prob)
-    # TODO: モデルに応じた適切な確率の標準化を行う
+    ja_prob = ca.exp(ja_prob)
+    ja_prob = ja_prob / ca.repmat(ca.sum(ja_prob, 0), 3, 1) # repmatは行方向に3行分複製
     ret = ca.MX(0)
     for i in range(len(x)):
       ret -= ca.log(ja_prob[x[i]])
@@ -42,20 +51,10 @@ class BayesEstimation:
     return 0.5* (th-self.mu).T @ self.Sig_inv @ (th-self.mu)
     
   def estimate(self, x: np.ndarray) -> np.ndarray:
-    warm_start = {"x0": self.sol["x"]}
-    
-    if(x.shape[0] == 0):
-      likelihood = self.log_pi(self.th)
-    else:
-      likelihood = self.log_model(self.th, x) + self.log_pi(self.th)
-    
-    nlp = {"x": self.th, "f": likelihood}
-    
-    opts = {"print_time": False, "ipopt.print_level": 0}
-    solver = ca.nlpsol("solver", "ipopt", nlp, opts)
-    
-    self.sol = solver(**warm_start)
-    return self.transmat @ self.sol["x"]
+    param = 
+    warm_start = {"x0": self.sol["x"], "p": self.transmat} # mada
+    self.sol = self.solver(**warm_start)
+    return self.sol["x"]
   
   def _load_params(self):
     with open(self.file_param, "rb") as f:
