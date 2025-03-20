@@ -12,12 +12,9 @@ class BayesEstimation:
     self.file_param = file_param
     self.file_mat = file_mat
     
-    self.Sig = ca.DM.zeros(NP, NP)
-    self.mu = ca.DM.zeros(NP)
-    self.Sig_inv = ca.inv(self.Sig)
-    self.transmat = ca.DM.zeros(3, NS, NP)
-    
-    self.th = ca.MX.sym("th", NP)
+    self.Sig = np.identity(NP)
+    self.mu = np.zeros(NP)
+    self.transmat = np.ones((3, NS, NP))
     
   def set_param(self, mu, Sigma):
     self.mu = mu
@@ -29,23 +26,34 @@ class BayesEstimation:
 
   def log_model(self, th:ca.MX, x:np.ndarray) -> ca.MX:
     # x[i] = [i番目の状態, 直後に出した手]
-    ja_prob = self.transmat @ th
+    tp_transmat = self.transmat.reshape(-1, NP)
+    ja_prob = ca.mtimes(tp_transmat, th)
+    ja_prob = ca.reshape(ja_prob, 3, NS)
     ja_prob = ca.exp(ja_prob)
-    ja_prob = ja_prob / ca.repmat(ca.sum(ja_prob, 0), 3, 1) # repmatは行方向に3行分複製
+    ja_prob = ja_prob / ca.repmat(ca.sum1(ja_prob), 3, 1) # repmatは行方向に3行分複製
+    
     ret = ca.MX(0)
     for i in range(len(x)):
-      ret -= ca.log(ja_prob[x[i][0]][x[i][1]])
+      ret -= ca.log(ja_prob[x[i][1],x[i][0]])
     return ret
   
   def log_pi(self, th:ca.MX) -> ca.MX:
     return 0.5* (th-self.mu).T @ self.Sig_inv @ (th-self.mu)
     
   def estimate(self, x: np.ndarray) -> np.ndarray:
-    likelihood = self.log_model(self.th, x) + self.log_pi(self.th)
-    solver = ca.nlpsol("solver", "ipopt", {"x": self.th, "f": likelihood})
-    warm_start = {"x0": self.sol["x"]}
-    self.sol = solver(**warm_start)
-    return self.sol["x"]
+    th = ca.MX.sym("th", NP)
+    likelihood = self.log_model(th, x) + self.log_pi(th)
+    # 最適化についてprintしない
+    opts = {"print_time": False, "ipopt.print_level": 0}
+    
+    solver = ca.nlpsol("solver", "ipopt", {"x": th, "f": likelihood}, opts)
+    if "sol" not in dir(self):
+      self.sol = solver(x0=ca.DM.zeros(NP))
+    else:
+      warm_start = {"x0": self.sol["x"]}
+      self.sol = solver(**warm_start)
+    print(self.sol["f"])
+    return self.sol["x"].full()
   
   def _load_params(self):
     with open(self.file_param, "rb") as f:
