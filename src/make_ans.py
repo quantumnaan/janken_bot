@@ -5,12 +5,17 @@ import os
 from constatants import *
 
 
-n = 100 # 人数
+n = 10 # 人数
 m = 20 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
 
+ans_mu = np.random.random(NP)*2-1 # 正解の平均
+ans_Sig = np.random.random((NP, NP))*2-1 # 正解の共分散行列
+ans_Sig = ans_Sig @ ans_Sig.T # 正定値対称行列にする
+
 ans_transmat = np.random.rand(3, NS, NP)*2-1 # 正解の変換行列, 手の数3, 状態数6, パラメータ次元3
-ans_params = np.random.rand(NP, n)*2-1 # 正解のパラメータ
+ans_transmat[2] = - ans_transmat[0] - ans_transmat[1] # 列和は0(冗長性を削減)
+ans_params = np.random.multivariate_normal(ans_mu, ans_Sig, size=n).T # 正解のパラメータ
 
 def state_update(choice1, choice2): 
   """
@@ -28,12 +33,13 @@ sample_data = np.exp(sample_data) / np.sum(np.exp(sample_data), axis=0)
 data_ans = {
   "transmat": ans_transmat,
   "params": ans_params,
-  "sample_data": sample_data
+  "sample_data": sample_data,
+  "mu": ans_mu,
+  "Sig": ans_Sig
 }
 
 with open(file_data_param, 'wb') as f:
   pk.dump(data_ans, f)
-print("data saved")
 
 # データ(実際に出した手)の生成
 data_choice = []
@@ -50,3 +56,5 @@ data_choice = np.array(data_choice)
     
 with open(file_data, 'wb') as f:
   pk.dump(data_choice, f)
+  
+print("data saved")
