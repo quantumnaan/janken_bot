@@ -5,6 +5,13 @@ import os
 
 from constatants import *
 
+
+def x2countmat(x:np.ndarray):
+  mat = np.zeros((3, NS))
+  for xt in x:
+    mat[xt[1],xt[0]] += 1
+  return mat
+
 class BayesEstimation:
   def __init__(self):
     assert os.path.exists(file_param), f"File {file_param} does not exist"
@@ -19,7 +26,7 @@ class BayesEstimation:
   def set_param(self, mu, Sigma):
     self.mu = mu
     self.Sig = Sigma
-    assert np.linalg.det(self.Sig) > 0, print(f"sig is not positive definite: {self.Sig}")
+    # assert np.linalg.det(self.Sig) > 0, print(f"sig is not positive definite: \n{self.Sig}")
     self.Sig_inv = np.linalg.inv(self.Sig)
     assert not np.isnan(self.Sig_inv).any(), print(f"sig contains nan: {np.isnan(self.Sig_inv)}")
     
@@ -30,22 +37,25 @@ class BayesEstimation:
     # x[i] = [i番目の状態, 直後に出した手]
     tp_transmat = self.transmat.reshape(3*NS, NP)
     assert not np.isnan(tp_transmat).any(), print(f"transmat contains nan: {np.isnan(tp_transmat)}")
-    ja_prob = tp_transmat @ th
-    ja_prob = ca.reshape(ja_prob, 3, NS)
-    ja_prob = ca.exp(ja_prob)
-    ja_prob = ja_prob / ca.repmat(ca.sum1(ja_prob), 3, 1) # repmatは行方向に3行分複製
+    ja_prob1 = tp_transmat @ th
+    ja_prob2 = ca.reshape(ja_prob1, 3, NS)
+    ja_prob3 = ca.exp(ja_prob2)
+    ja_prob = ja_prob3 / ca.repmat(ca.sum1(ja_prob3), 3, 1) # repmatは行方向に3行分複製
     
     ret = ca.MX(0)
     for i in range(len(x)):
-      ret -= ca.log(ja_prob[x[i,1],x[i,0]] +EPS)
+      ret = ret - ca.log(ja_prob[x[i,1],x[i,0]] +EPS)
+    
+    ret = ret + lambda2_ * ca.sum2(ca.sum1((ja_prob+EPS) * ca.log(ja_prob+EPS)))
     return ret
   
   def log_pi(self, th:ca.MX) -> ca.MX:
+    # siginv = np.identity(NP)*0.05
     return 0.5* (th-self.mu).T @ self.Sig_inv @ (th-self.mu)
     
   def estimate(self, x: np.ndarray) -> np.ndarray:
     th = ca.MX.sym("th", NP)
-    likelihood = self.log_model(th, x) + self.log_pi(th) # ラプラス近似を考えると pi は要らないかも？
+    likelihood = self.log_model(th, x) #+ lambda3_ * self.log_pi(th) # ラプラス近似を考えると pi は要らないかも？
     # 最適化についてprintしない
     opts = {"print_time": False, "ipopt.print_level": 0}
     
@@ -61,9 +71,15 @@ class BayesEstimation:
     ja_prob2 = ca.reshape(ja_prob1, 3, NS)
     ja_prob3 = ca.exp(ja_prob2)
     ja_prob = ja_prob3 / ca.repmat(ca.sum1(ja_prob3), 3, 1) # repmatは行方向に3行分複製
-    # print(ja_prob)
-    # print(x)
-    # input()
+    entropy = ca.sum2(ca.sum1((ja_prob+EPS) * ca.log(ja_prob+EPS))).full()
+
+    print(np.sum(tp_transmat))
+    print(self.sol["x"])
+    print(tp_transmat @ self.sol["x"])
+    print(np.array(ja_prob))
+    print(x2countmat(x))
+    print(f"entropy: {entropy}")
+    input()
 
     return self.sol["x"].full().flatten()
   

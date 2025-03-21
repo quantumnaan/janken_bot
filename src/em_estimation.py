@@ -27,6 +27,11 @@ class ParamEstimation:
     with open(file_data_param, "rb") as f:
       loaded_data = pk.load(f)
       self.data_param = loaded_data
+      self.mu = self.data_param["mu"]
+      self.Sig = self.data_param["Sig"]
+      self.transmat = self.data_param["transmat"]
+    print(self.data_param["mu"])
+    print(self.data_param["Sig"])
     print(f"data shape: {len(self.data)}")
     
   def param_estimation(self):
@@ -40,6 +45,7 @@ class ParamEstimation:
       print(self.mu)
       print(self.Sig)
       
+      # for i in range(3): self.transmat = self.Testimaiton()
       self.transmat = self.Testimaiton()
       print(f"{k+1} th transmat estimation finished:")
       input()
@@ -66,8 +72,7 @@ class ParamEstimation:
     mu_hat = np.mean(ths, axis=0).flatten()
     Sig_hat = np.zeros((NP, NP))
     
-    ths += np.random.multivariate_normal(np.zeros(NP), 0.1 * np.identity(NP), size=n)
-    
+    # ths += np.random.multivariate_normal(np.zeros(NP), 0.1 * np.identity(NP), size=n)
     
     for i in range(NP):
       for j in range(i+1):
@@ -89,15 +94,17 @@ class ParamEstimation:
       ja_prob2 = ca.reshape(ja_prob1, 3, NS)
       ja_prob3 = ca.exp(ja_prob2)
       ja_prob = ja_prob3 / ca.repmat(ca.sum1(ja_prob3), 3, 1) # repmatは行方向に3行分複製
+
       x = self.data[i]
       for j in range(len(x)):
-        likelihood -= ca.log(ja_prob[x[j,1],x[j,0]] + EPS)
+        likelihood = likelihood - ca.log(ja_prob[x[j,1],x[j,0]] + EPS)
       
-      # # エントロピー正則化
-      # for j in range(NS):
-      #   likelihood += lambda_ * ca.sum1(ja_prob[:,j] * ca.log(ja_prob[:,j] + EPS))
+      # エントロピー正則化
+      for j in range(NS):
+        likelihood = likelihood + lambda2_ * ca.sum1((ja_prob[:,j]+EPS) * ca.log(ja_prob[:,j]))
     
-    likelihood += lambda_ * ca.norm_2(ca.vec(transmat)) # 冗長な分はこれで正則化されるはず
+    # likelihood += likelihood + lambda1_ * ca.norm_2(ca.sum1(ca.reshape(transmat, 3, NS*NP))) # 冗長な分はこれで正則化されるはず
+    likelihood = likelihood + lambda1_ * ca.norm_2(ca.vec(transmat)) # 冗長な分はこれで正則化されるはず
         
     opts = {"print_time": False, "ipopt.print_level": 0}
     # gs = [ca.sum1(ca.reshape(transmat, 3, NS*NP))]

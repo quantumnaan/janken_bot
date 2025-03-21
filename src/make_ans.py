@@ -11,24 +11,29 @@ def state_update(choice1, choice2):
     return: この時の状態 cf. constatants.py
   """
   win_lose = (choice2 - choice1 + 4) %3 # 0:負け, 1:あいこ, 2:勝ち
-  return choice1*3 + win_lose
+  return (choice1*3 + win_lose)%3
+  # return choice1
 
-n = 10 # 人数
-m = 20 # 1人あたりのデータ数 
+n = 5 # 人数
+m = 40 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
+np.set_printoptions(precision=3)
 
-ans_mu = np.random.random(NP)-0.5 # 正解の平均
-ans_Sig = np.random.random((NP, NP))-0.5 # 正解の共分散行列
-ans_Sig = ans_Sig @ ans_Sig.T # 正定値対称行列にする
+ans_mu = (np.random.random(NP)-0.5)*5 # 正解の平均
+ans_Sig = (np.random.random((NP, NP))-0.5)*3
+ans_Sig = ans_Sig @ ans_Sig.T # 正解の共分散行列, 正定値対称行列にする
 ans_params = np.random.multivariate_normal(ans_mu, ans_Sig, size=n).T # 正解のパラメータ
 
-ans_transmat = (np.random.rand(3, NS, NP)-0.5) # 正解の変換行列, 手の数3, 状態数6, パラメータ次元3
+print(f"mu: \n{ans_mu}")
+print(f"Sig: \n{ans_Sig}")
+
+ans_transmat = (np.random.rand(3, NS, NP)-0.5)*0.2 # 正解の変換行列, 手の数3, 状態数6, パラメータ次元3
 ans_transmat[2] = - ans_transmat[0] - ans_transmat[1] # 列和は0(冗長性を削減)
 
 # データ(手の出し方を表す行列)の生成
 sample_data = ans_transmat @ ans_params
 sample_data = np.exp(sample_data) / np.sum(np.exp(sample_data), axis=0)
-print(sample_data)
+
 
 data_ans = {
   "transmat": ans_transmat,

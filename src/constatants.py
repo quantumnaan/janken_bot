@@ -5,13 +5,16 @@ file_data = "./data/sample_data.pkl" # [人i:[(t番目の状態, 直後に出し
 file_data_param = "./data/sample_data_param.pkl"
 
 # NP:パラメータ数，NS:状態数
-NP = 5
-NS = 9
+NP = 4
+NS = 3
 
-EPS = 1e-5
-lambda_ = 0.2
+EPS = 1e-12
+lambda1_ = 0.1 # em_estimationでのtransmat予測時の正則化
+lambda2_ = 1.5 # thのestimateでのエントロピー正則化
+# lambda3_ = 0.02 # thのestimateでのエントロピー正則化
 
 np.random.seed(0) # 乱数固定
+np.set_printoptions(precision=2)
 
 # 状態のインデックス対応 (i:(前に出した手，前の勝敗))
 # 0: (グー, 負け), 1: (グー, あいこ), 2: (グー, 勝ち)
