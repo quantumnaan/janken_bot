@@ -19,14 +19,17 @@ class BayesEstimation:
   def set_param(self, mu, Sigma):
     self.mu = mu
     self.Sig = Sigma
+    assert np.linalg.det(self.Sig) > 0, print(f"sig is not positive definite: {self.Sig}")
     self.Sig_inv = np.linalg.inv(self.Sig)
+    assert not np.isnan(self.Sig_inv).any(), print(f"sig contains nan: {np.isnan(self.Sig_inv)}")
     
   def set_transmat(self, transmat):
     self.transmat = transmat    
 
   def log_model(self, th:ca.MX, x:np.ndarray) -> ca.MX:
     # x[i] = [i番目の状態, 直後に出した手]
-    tp_transmat = self.transmat.reshape(-1, NP)
+    tp_transmat = self.transmat.reshape(3*NS, NP)
+    assert not np.isnan(tp_transmat).any(), print(f"transmat contains nan: {np.isnan(tp_transmat)}")
     ja_prob = tp_transmat @ th
     ja_prob = ca.reshape(ja_prob, 3, NS)
     ja_prob = ca.exp(ja_prob)
@@ -34,7 +37,7 @@ class BayesEstimation:
     
     ret = ca.MX(0)
     for i in range(len(x)):
-      ret -= ca.log(ja_prob[x[i,1],x[i,0]] + EPS)
+      ret -= ca.log(ja_prob[x[i,1],x[i,0]] +EPS)
     return ret
   
   def log_pi(self, th:ca.MX) -> ca.MX:
@@ -42,17 +45,27 @@ class BayesEstimation:
     
   def estimate(self, x: np.ndarray) -> np.ndarray:
     th = ca.MX.sym("th", NP)
-    likelihood = self.log_model(th, x) + self.log_pi(th)
+    likelihood = self.log_model(th, x) + self.log_pi(th) # ラプラス近似を考えると pi は要らないかも？
     # 最適化についてprintしない
     opts = {"print_time": False, "ipopt.print_level": 0}
     
     solver = ca.nlpsol("solver", "ipopt", {"x": th, "f": likelihood}, opts)
     if "sol" not in dir(self):
-      self.sol = solver(x0=np.ones(NP))
+      self.sol = solver(x0=np.zeros(NP))
     else:
       warm_start = {"x0": self.sol["x"]}
       self.sol = solver(**warm_start)
-    return self.sol["x"].full()
+      
+    tp_transmat = self.transmat.reshape(3*NS, NP)
+    ja_prob1 = tp_transmat @ self.sol["x"]
+    ja_prob2 = ca.reshape(ja_prob1, 3, NS)
+    ja_prob3 = ca.exp(ja_prob2)
+    ja_prob = ja_prob3 / ca.repmat(ca.sum1(ja_prob3), 3, 1) # repmatは行方向に3行分複製
+    # print(ja_prob)
+    # print(x)
+    # input()
+
+    return self.sol["x"].full().flatten()
   
   def _load_params(self):
     with open(self.file_param, "rb") as f:

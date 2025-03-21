@@ -14,16 +14,19 @@ class ParamEstimation:
   def __init__(self):
     self.th_estimation = BayesEstimation()
     self.data = []
-    self.Sig = np.identity(NP)*10
+    self.data_param = {}
+    self.Sig = np.identity(NP)*2
     self.mu = np.zeros(NP)
-    self.transmat = np.random.rand(3, NS, NP)*2-1
-    self.transmat[2] = -self.transmat[0] - self.transmat[1]
+    self.transmat = np.random.randn(3, NS, NP)
     
   def load_data(self):
     assert os.path.exists(file_data), f"File {file_data} does not exist"
     with open(file_data, "rb") as f:
       loaded_data = pk.load(f)
     self.data = loaded_data
+    with open(file_data_param, "rb") as f:
+      loaded_data = pk.load(f)
+      self.data_param = loaded_data
     print(f"data shape: {len(self.data)}")
     
   def param_estimation(self):
@@ -39,7 +42,6 @@ class ParamEstimation:
       
       self.transmat = self.Testimaiton()
       print(f"{k+1} th transmat estimation finished:")
-      print(self.transmat)
       input()
       
       if np.linalg.norm(prev_mu - self.mu, ord=1) < 1e-3 and \
@@ -64,6 +66,9 @@ class ParamEstimation:
     mu_hat = np.mean(ths, axis=0).flatten()
     Sig_hat = np.zeros((NP, NP))
     
+    ths += np.random.multivariate_normal(np.zeros(NP), 0.1 * np.identity(NP), size=n)
+    
+    
     for i in range(NP):
       for j in range(i+1):
         Sig_hat[i,j] = np.dot(ths[:,i].flatten() - mu_hat[i], ths[:,j].flatten() - mu_hat[j]) / (n-1)
@@ -75,35 +80,49 @@ class ParamEstimation:
     ths = self.MAP_ths()
     
     likelihood = ca.MX(0)
-    transmat2 = ca.MX.sym("transmat", 2*NS, NP)
-    tp_mat2 = ca.reshape(transmat2, 2, NS*NP)
-    transmat = ca.reshape(ca.vertcat(tp_mat2, -ca.sum1(tp_mat2)), 3*NS, NP)
+    transmat = ca.MX.sym("transmat", 3*NS, NP)
+    # transmat2 = ca.MX.sym("transmat", 2*NS, NP)
+    # tp_mat2 = ca.reshape(transmat2, 2, NS*NP)
+    # transmat = ca.reshape(ca.vertcat(tp_mat2, -ca.sum1(tp_mat2)), 3*NS, NP)
     for i in range(len(self.data)):
-      ja_prob = transmat @ ths[i]
-      ja_prob = ca.reshape(ja_prob, 3, NS)
-      ja_prob = ca.exp(ja_prob) + EPS
-      ja_prob = ja_prob / ca.repmat(ca.sum1(ja_prob), 3, 1) # repmatは行方向に3行分複製
+      ja_prob1 = transmat @ ths[i]
+      ja_prob2 = ca.reshape(ja_prob1, 3, NS)
+      ja_prob3 = ca.exp(ja_prob2)
+      ja_prob = ja_prob3 / ca.repmat(ca.sum1(ja_prob3), 3, 1) # repmatは行方向に3行分複製
       x = self.data[i]
       for j in range(len(x)):
         likelihood -= ca.log(ja_prob[x[j,1],x[j,0]] + EPS)
+      
+      # # エントロピー正則化
+      # for j in range(NS):
+      #   likelihood += lambda_ * ca.sum1(ja_prob[:,j] * ca.log(ja_prob[:,j] + EPS))
+    
+    likelihood += lambda_ * ca.norm_2(ca.vec(transmat)) # 冗長な分はこれで正則化されるはず
         
     opts = {"print_time": False, "ipopt.print_level": 0}
-    solver = ca.nlpsol("solver", "ipopt", {"x": ca.vec(transmat2), "f": likelihood}, opts)
+    # gs = [ca.sum1(ca.reshape(transmat, 3, NS*NP))]
+    # lbg = [np.zeros(NS*NP)]
+    # ubg = [np.zeros(NS*NP)]
+    # gs = ca.vertcat(*gs)
+    # lbg = ca.vertcat(*lbg)
+    # ubg = ca.vertcat(*ubg)
+    solver = ca.nlpsol("solver", "ipopt", {"x": ca.vec(transmat), "f": likelihood}, opts)
     
     if "solT" not in dir(self):
-      self.solT = solver(x0=np.ones(2 * NS * NP))
+      self.solT = solver(x0=np.random.randn(3 * NS * NP))
     else:
       warm_start = {"x0": self.solT["x"]}
       self.solT = solver(**warm_start)
     
-    sol_mat2 = ca.reshape(self.solT["x"], 2, NS*NP)
-    sol_mat = ca.vertcat(sol_mat2, -ca.sum1(sol_mat2)).full()
+    # sol_mat2 = ca.reshape(self.solT["x"], 2, NS*NP)
+    # sol_mat = ca.vertcat(sol_mat2, -ca.sum1(sol_mat2)).full()
+    sol_mat = self.solT["x"].full()
     sol_mat = sol_mat.reshape((3, NS, NP))
-    mat_hat = sol_mat @ self.mu
-    mat_hat = np.exp(mat_hat)
-    mat_hat = mat_hat / np.sum(mat_hat, axis=0)
-    print(mat_hat)
-    input()
+    # mat_hat = sol_mat @ self.mu
+    # mat_hat = np.exp(mat_hat)
+    # mat_hat = mat_hat / np.sum(mat_hat, axis=0)
+    # print(mat_hat)
+    # input()
       
     return sol_mat
   
@@ -115,5 +134,9 @@ if __name__ == "__main__":
   print(param_estimation.mu)
   print("\n Sig:")
   print(param_estimation.Sig)
-  print("\n transmat:")
-  print(param_estimation.transmat)
+  print("\n true mu:")
+  print(param_estimation.data_param["mu"])
+  print("\n true Sig:")
+  print(param_estimation.data_param["Sig"])
+  # print("\n transmat:")
+  # print(param_estimation.transmat)

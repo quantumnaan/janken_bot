@@ -1,4 +1,4 @@
-
+import numpy as np
 file_param = "./data/params.pkl"
 file_mat = "./data/transmat.pkl"
 file_data = "./data/sample_data.pkl" # [人i:[(t番目の状態, 直後に出した手)]]
@@ -9,6 +9,9 @@ NP = 5
 NS = 9
 
 EPS = 1e-5
+lambda_ = 0.2
+
+np.random.seed(0) # 乱数固定
 
 # 状態のインデックス対応 (i:(前に出した手，前の勝敗))
 # 0: (グー, 負け), 1: (グー, あいこ), 2: (グー, 勝ち)
