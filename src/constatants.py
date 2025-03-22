@@ -9,9 +9,10 @@ NP = 4
 NS = 3
 
 EPS = 1e-12
-lambda1_ = 0.1 # em_estimationでのtransmat予測時の正則化
+lambda1_ = 1e-2 # em_estimationでのtransmat予測時の正則化
 lambda2_ = 1.5 # thのestimateでのエントロピー正則化
 # lambda3_ = 0.02 # thのestimateでのエントロピー正則化
+lambda4_ = 1e-4
 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=2)

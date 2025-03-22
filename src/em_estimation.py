@@ -56,7 +56,6 @@ class ParamEstimation:
           print("param estimation converged")
           break
         
-        
   def MAP_ths(self):
     ths = []
     self.th_estimation.set_param(self.mu, self.Sig)
@@ -133,6 +132,14 @@ class ParamEstimation:
       
     return sol_mat
   
+  def Pmat_estimation(self, x:np.ndarray) -> np.ndarray:
+    self.th_estimation.set_param(self.mu, self.Sig)
+    self.th_estimation.set_transmat(self.transmat)
+    th = self.th_estimation.estimate(x, MAP=True)
+    Pmat = self.transmat @ th
+    Pmat = np.exp(Pmat) / np.sum(np.exp(Pmat), axis=0)
+    return Pmat
+  
 if __name__ == "__main__":
   param_estimation = ParamEstimation()
   param_estimation.load_data()
@@ -145,5 +152,10 @@ if __name__ == "__main__":
   print(param_estimation.data_param["mu"])
   print("\n true Sig:")
   print(param_estimation.data_param["Sig"])
+  print("\n ex. 人 0 の手の出し方(真の値):")
+  print(param_estimation.data_param["sample_data"][:,:,1])
+  print("\n ex. 人 0 の手の出し方(予測値):")
+  print(param_estimation.Pmat_estimation(param_estimation.data[1]))
+  
   # print("\n transmat:")
   # print(param_estimation.transmat)

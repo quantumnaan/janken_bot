@@ -53,9 +53,11 @@ class BayesEstimation:
     # siginv = np.identity(NP)*0.05
     return 0.5* (th-self.mu).T @ self.Sig_inv @ (th-self.mu)
     
-  def estimate(self, x: np.ndarray) -> np.ndarray:
+  def estimate(self, x: np.ndarray, MAP:bool = False) -> np.ndarray:
     th = ca.MX.sym("th", NP)
-    likelihood = self.log_model(th, x) #+ lambda3_ * self.log_pi(th) # ラプラス近似を考えると pi は要らないかも？
+    likelihood = self.log_model(th, x)
+    if MAP: likelihood = likelihood + self.log_pi(th) # ラプラス近似を考えると pi は要らないかも？
+    likelihood = likelihood + lambda4_ * (ca.sum1(th))**2
     # 最適化についてprintしない
     opts = {"print_time": False, "ipopt.print_level": 0}
     
@@ -73,13 +75,13 @@ class BayesEstimation:
     ja_prob = ja_prob3 / ca.repmat(ca.sum1(ja_prob3), 3, 1) # repmatは行方向に3行分複製
     entropy = ca.sum2(ca.sum1((ja_prob+EPS) * ca.log(ja_prob+EPS))).full()
 
-    print(np.sum(tp_transmat))
-    print(self.sol["x"])
-    print(tp_transmat @ self.sol["x"])
-    print(np.array(ja_prob))
-    print(x2countmat(x))
-    print(f"entropy: {entropy}")
-    input()
+    # print(np.sum(tp_transmat))
+    # print(self.sol["x"])
+    # print(tp_transmat @ self.sol["x"])
+    # print(np.array(ja_prob))
+    # print(x2countmat(x))
+    # print(f"entropy: {entropy}")
+    # input()
 
     return self.sol["x"].full().flatten()
   

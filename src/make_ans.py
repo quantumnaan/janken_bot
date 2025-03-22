@@ -14,8 +14,8 @@ def state_update(choice1, choice2):
   return (choice1*3 + win_lose)%3
   # return choice1
 
-n = 5 # 人数
-m = 40 # 1人あたりのデータ数 
+n = 20 # 人数
+m = 20 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=3)
 
@@ -27,7 +27,7 @@ ans_params = np.random.multivariate_normal(ans_mu, ans_Sig, size=n).T # 正解�
 print(f"mu: \n{ans_mu}")
 print(f"Sig: \n{ans_Sig}")
 
-ans_transmat = (np.random.rand(3, NS, NP)-0.5)*0.2 # 正解の変換行列, 手の数3, 状態数6, パラメータ次元3
+ans_transmat = (np.random.rand(3, NS, NP)-0.5)*0.4 # 正解の変換行列, 手の数3, 状態数6, パラメータ次元3
 ans_transmat[2] = - ans_transmat[0] - ans_transmat[1] # 列和は0(冗長性を削減)
 
 # データ(手の出し方を表す行列)の生成
