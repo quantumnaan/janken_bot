@@ -100,10 +100,10 @@ class ParamEstimation:
       
       # エントロピー正則化
       for j in range(NS):
-        likelihood = likelihood + lambda2_ * ca.sum1((ja_prob[:,j]+EPS) * ca.log(ja_prob[:,j]))
+        likelihood = likelihood + lambda2_ * ca.sum1((ja_prob[:,j]+EPS) * ca.log(ja_prob[:,j]+EPS))
     
     # likelihood += likelihood + lambda1_ * ca.norm_2(ca.sum1(ca.reshape(transmat, 3, NS*NP))) # 冗長な分はこれで正則化されるはず
-    likelihood = likelihood + lambda1_ * ca.norm_2(ca.vec(transmat)) # 冗長な分はこれで正則化されるはず
+    # likelihood = likelihood + lambda1_ * (ca.sumsqr(transmat)/(3*NS*NP)-1)**2 # 冗長な分はこれで正則化されるはず
         
     opts = {"print_time": False, "ipopt.print_level": 0}
     # gs = [ca.sum1(ca.reshape(transmat, 3, NS*NP))]
@@ -152,10 +152,11 @@ if __name__ == "__main__":
   print(param_estimation.data_param["mu"])
   print("\n true Sig:")
   print(param_estimation.data_param["Sig"])
-  print("\n ex. 人 0 の手の出し方(真の値):")
-  print(param_estimation.data_param["sample_data"][:,:,1])
-  print("\n ex. 人 0 の手の出し方(予測値):")
-  print(param_estimation.Pmat_estimation(param_estimation.data[1]))
+  hito = 1
+  print(f"\n ex. 人 {hito} の手の出し方(真の値):")
+  print(param_estimation.data_param["sample_data"][:,:,hito])
+  print(f"\n ex. 人 {hito} の手の出し方(予測値):")
+  print(param_estimation.Pmat_estimation(param_estimation.data[hito]))
   
   # print("\n transmat:")
   # print(param_estimation.transmat)

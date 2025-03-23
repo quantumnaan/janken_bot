@@ -11,10 +11,10 @@ def state_update(choice1, choice2):
     return: この時の状態 cf. constatants.py
   """
   win_lose = (choice2 - choice1 + 4) %3 # 0:負け, 1:あいこ, 2:勝ち
-  return (choice1*3 + win_lose)%3
+  return (choice1*3 + win_lose)
   # return choice1
 
-n = 20 # 人数
+n = 40 # 人数
 m = 20 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=3)

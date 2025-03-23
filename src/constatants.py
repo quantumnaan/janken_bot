@@ -6,13 +6,13 @@ file_data_param = "./data/sample_data_param.pkl"
 
 # NP:パラメータ数，NS:状態数
 NP = 4
-NS = 3
+NS = 9
 
 EPS = 1e-12
 lambda1_ = 1e-2 # em_estimationでのtransmat予測時の正則化
-lambda2_ = 1.5 # thのestimateでのエントロピー正則化
+lambda2_ = 1e-2 # thのestimateでのエントロピー正則化
 # lambda3_ = 0.02 # thのestimateでのエントロピー正則化
-lambda4_ = 1e-4
+lambda4_ = 1e-1
 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=2)

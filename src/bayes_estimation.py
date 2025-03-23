@@ -57,7 +57,7 @@ class BayesEstimation:
     th = ca.MX.sym("th", NP)
     likelihood = self.log_model(th, x)
     if MAP: likelihood = likelihood + self.log_pi(th) # ラプラス近似を考えると pi は要らないかも？
-    likelihood = likelihood + lambda4_ * (ca.sum1(th))**2
+    likelihood = likelihood + lambda4_ * (ca.sumsqr(th)/NP-1)**2
     # 最適化についてprintしない
     opts = {"print_time": False, "ipopt.print_level": 0}
     
