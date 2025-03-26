@@ -1,6 +1,9 @@
-# これは何
+# このリポジトリは何
 じゃんけんのwebアプリ．
 flask, flask-socketioでデータをやり取りしている．
+
+# このブランチは何
+手動で特徴量を与えて，回帰するよ
 
 # ファイルベースの説明
 
@@ -11,5 +14,5 @@ flask, flask-socketioでデータをやり取りしている．
 - src/em_estimation.py:
   事前分布として何を使うかによっては使用する
 
-- document/janken_bot.pdf:
-  このbotの構造を決めるにあたって考えたことを書いてます
+- document/janken_bot_simple.pdf:
+  このbot(このブランチ)の構造を決めるにあたって考えたことを書いてます

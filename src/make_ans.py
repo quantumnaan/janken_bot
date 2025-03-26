@@ -4,6 +4,7 @@ import os
 
 from constatants import *
 
+
 def state_update(choice1, choice2): 
   """
     choice1: 前に出した手
@@ -15,7 +16,7 @@ def state_update(choice1, choice2):
   # return choice1
 
 n = 40 # 人数
-m = 20 # 1人あたりのデータ数 
+m = 100 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=3)
 
@@ -53,8 +54,8 @@ for i in range(n):
   state = np.random.choice(NS)
   for j in range(m):
     choice_ij = np.random.choice(3, p=sample_data[:, state, i])
-    data_choice[i].append((state, choice_ij))
     cp_choice = np.random.choice(3)
+    data_choice[i].append((choice_ij, cp_choice))
     state = state_update(choice_ij, cp_choice)
 
 data_choice = np.array(data_choice)
