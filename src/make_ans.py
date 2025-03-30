@@ -3,18 +3,22 @@ import pickle as pk
 import os
 
 from constatants import *
+from utils import *
 
-def state_update(choice1, choice2): 
-  """
-    choice1: 前に出した手
-    choice2: 前にCPが(ランダムに)出した手
-    return: この時の状態 cf. constatants.py
-  """
-  win_lose = (choice2 - choice1 + 4) %3 # 0:負け, 1:あいこ, 2:勝ち
-  return (choice1*3 + win_lose)
+"""
+file_data_param には以下のデータを保存する
+  - 正解の変換行列
+  - 正解のパラメータ
+  - 正解の平均
+  - 正解の共分散行列
+
+file_data には以下のデータを保存する
+  - [人i:[ターンt:(人iが出した手, cpが出した手)]]
+"""
+
   # return choice1
 
-n = 40 # 人数
+n = 100 # 人数
 m = 20 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=3)
@@ -53,9 +57,9 @@ for i in range(n):
   state = np.random.choice(NS)
   for j in range(m):
     choice_ij = np.random.choice(3, p=sample_data[:, state, i])
-    data_choice[i].append((state, choice_ij))
     cp_choice = np.random.choice(3)
-    state = state_update(choice_ij, cp_choice)
+    data_choice[i].append((choice_ij, cp_choice))
+    state = make_state(choice_ij, cp_choice)
 
 data_choice = np.array(data_choice)
     
