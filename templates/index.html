@@ -40,7 +40,7 @@
     </style>
     
     <script src="https://cdn.socket.io/4.1.3/socket.io.min.js"></script> <!-- Socket.IO CDN -->
-    <script src="{{url_for('static', filename='js/scripts.js') }}"></script> <!-- クライアント側JavaScript -->
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script> <!-- クライアント側JavaScript -->
 
 
 
@@ -64,11 +64,11 @@
             <div class="hands">
                 <div>
                     <p>相手の手</p>
-                    <img id="computer-hand" src="static/img/mark_question.png" alt="相手の手" class="rotate-image">
+                    <img id="computer-hand" src="{{ url_for('static', filename='img/mark_question.png') }}" alt="相手の手" class="rotate-image">
                 </div>
                 <ul id="wld"></ul>
                 <div>
-                    <img id="player-hand" src="static/img/mark_question.png" alt="あなたの手">
+                    <img id="player-hand" src="{{ url_for('static', filename='img/mark_question.png') }}" alt="あなたの手">
                     <p>あなたの手</p>
                 </div>
             </div>

@@ -1,38 +1,48 @@
 import numpy as np
 import pickle as pk
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, url_for
 import base64
 from flask_socketio import SocketIO, send
 
-from src.bayes_estimation import BayesEstimation
+import os
+import sys
+sys.path.append(os.path.abspath("src"))
+
+from vae import VAE
+from utils import *
 
 file_data = "./data/data.pkl"
 
 app = Flask(__name__)
 socketio = SocketIO(app)
-bayes_estimation = BayesEstimation()
+vae = VAE()
+vae.load_model()
 
 ones_data = []
-
-def data2indices(datas):
-  ret = []
-  for i in range(len(datas)-1):
-    ret.append(datas[i+1] + datas[i]*3)
-  return np.array(ret)  
 
 @app.route("/")
 def index():
   return render_template("index.html")
 
 @socketio.on("choose")
-def choose(data):
+def choose(choices):
+  """
+  Args:
+    choice: 人が出した手
+    cp_choice: CPが出した手
+  """
+  choice = choices["var1"]
+  cp_choice = choices["var2"]
   print("いい手を選ぶぞ!")
-  ones_data.append(data)
-  states = data2indices(ones_data)
-  probs = bayes_estimation.estimate(states)
-  print(f"相手の1つ前の手が {data} で {probs} だから..")
-  choise = (np.argmax(probs[3*data:3*data+3]) + 2 )%3
+  ones_data.append((choice, cp_choice))
+  data_mat = make_data_mat(np.array(ones_data)).view(-1, 3*NS)
+  prob_mat = vae(data_mat)[0].view(-1, 3, NS)
+  state = make_state(choice, cp_choice)
+  prob_next = prob_mat[:, :, state].detach().numpy().flatten()
+  
+  print(f"相手の1つ前の手が {choice} で次出す手の確率が {prob_next} だから..")
+  choise = (np.argmax(prob_next) + 2 )%3
   print(f"{choise} を選びました")
   return int(choise)
 

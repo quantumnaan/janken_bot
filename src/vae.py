@@ -63,6 +63,13 @@ class VAE(nn.Module):
     x_recon = self.decoder(z)
     return x_recon, mu, logvar
   
+  def load_model(self):
+    if os.path.exists(file_model):
+      self.load_state_dict(torch.load(file_model))
+      print("model loaded")
+    else:
+      print("model not found")
+  
 def criterion(pred_mat, data_mat, mu, logvar):
   """
   Args:
@@ -96,19 +103,6 @@ def load_param():
     data = pk.load(f)
   return data
 
-def make_data_mat(data):
-  """
-  Args:
-    data: 人i:[ターンt:(人iが出した手, cpが出した手)]
-  Returns:
-    data_mat: (3, NS) 各状態において各手を何回選んだかの行列
-  """
-  data_mat = torch.zeros((3, NS))
-  m = data.shape[0]
-  for t in range(m-1):
-    state = make_state(data[t,0], data[t,1])
-    data_mat[data[t+1,0]][state] += 1
-  return data_mat
 
 
 
