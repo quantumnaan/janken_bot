@@ -18,7 +18,28 @@ const handImages = {
 
 const questionImage = "static/img/mark_question.png";
 
-resetGame();
+// カメラ用変数と設定
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const context = canvas.getContext('2d');
+const socket = io.connect('http://localhost:5000');
+
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(function(stream) {
+        video.srcObject = stream;
+    });
+
+setInterval(function() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataURL = canvas.toDataURL('image/png');
+    const base64Image = dataURL.split(',')[1]; // Base64部分を取得
+
+    socket.emit('video_frame', {image:base64Image}); // サーバーに画像を送信
+}, 100); // 100msごとに画像を送信
+
 
 function playGame(playerChoice) {
 
@@ -66,7 +87,6 @@ function chooseNext(playerChoice, computerChoice) {
     });
 }
 
-
 function generateOpponentID() {
     return Math.floor(Math.random() * 100000);
 }
@@ -103,6 +123,7 @@ function string2number(str) {
         return -1;
     }
 }
+
 function number2string(num) {
     if (num === 0) {
         return "グー";

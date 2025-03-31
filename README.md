@@ -3,7 +3,7 @@
 flask, flask-socketioでデータをやり取りしている．
 
 # 動かし方
-+ ブラウザで http://127.0.0.1:5000/
++ ブラウザで http://localhost:5000
 + メインディレクトリ上で python main_app.py
 
 # ファイルベースの説明

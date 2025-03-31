@@ -1,15 +1,16 @@
 import numpy as np
 import pickle as pk
-import os
 from flask import Flask, render_template, url_for
-import base64
 from flask_socketio import SocketIO, send
+import cv2
+import base64
 
 import os
 import sys
 sys.path.append(os.path.abspath("src"))
 
 from vae import VAE
+from camera_stream import detect_hand_gesture
 from utils import *
 
 file_data = "./data/data.pkl"
@@ -18,8 +19,10 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 vae = VAE()
 vae.load_model()
+cnt = 0
 
 ones_data = []
+
 
 @app.route("/")
 def index():
@@ -49,13 +52,29 @@ def choose(choices):
 @socketio.on("reset")
 def reset():
   ones_data.clear()
+  cnt += 1
+  if(cnt%10==0):{
+    vae.load_model()
+  }
   
 @socketio.on("save_data")
 def save_data():
-  # TODO: 上書きしない
-  with open(file_data, 'wb') as f:
+  with open(file_data, 'ab') as f:
     pk.dump(ones_data, f)
   return "saved"
+
+@socketio.on("video_frame")
+def handle_video(data):
+  # 画像データをデコード
+  img_data = base64.b64decode(data['image'])
+  np_arr = np.frombuffer(img_data, np.uint8)
+  frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+  
+  # 手のジェスチャーを検出
+  gesture = detect_hand_gesture(frame)
+  
+  # 結果をクライアントに送信
+  socketio.emit("gesture", {"gesture": gesture})
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)

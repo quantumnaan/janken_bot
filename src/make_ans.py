@@ -61,9 +61,11 @@ for i in range(n):
     data_choice[i].append((choice_ij, cp_choice))
     state = make_state(choice_ij, cp_choice)
 
-data_choice = np.array(data_choice)
-    
-with open(file_data, 'wb') as f:
-  pk.dump(data_choice, f)
+  
+if os.path.exists(file_data):
+  os.remove(file_data)
+for i in range(n):
+  with open(file_data, 'ab') as f:
+    pk.dump(data_choice[i], f)
   
 print("data saved")

@@ -1,7 +1,7 @@
 import numpy as np
 file_param = "./data/params.pkl"
 file_mat = "./data/transmat.pkl"
-file_data = "./data/sample_data.pkl" # [人i:[ターンt:(人iが出した手, cpが出した手)]]
+file_data = "./data/data.pkl" # [人i:[ターンt:(人iが出した手, cpが出した手)]]
 file_data_param = "./data/sample_data_param.pkl"
 file_model = "./data/model.pkl"
 

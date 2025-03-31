@@ -69,6 +69,11 @@ class VAE(nn.Module):
       print("model loaded")
     else:
       print("model not found")
+      
+  def save_model(self):
+    if os.path.exists(file_model):
+      os.remove(file_model)
+    torch.save(self.state_dict(), file_model)
   
 def criterion(pred_mat, data_mat, mu, logvar):
   """
@@ -85,14 +90,17 @@ def criterion(pred_mat, data_mat, mu, logvar):
   KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
   return BCE + KLD
 
-def load_data():
-  """
-  Returns:
-    data: (人数, 3, NS) 各状態において各手を何回選んだかの行列
-  """
+def load_data():  
+  obj = []
   with open(file_data, 'rb') as f:
-    data = pk.load(f)
-  return data
+    while 1:
+      try:
+        obj.append(pk.load(f))
+      except:
+        break
+  obj = np.array(obj)
+  
+  return obj
 
 def load_param():
   """
@@ -103,10 +111,8 @@ def load_param():
     data = pk.load(f)
   return data
 
-
-
-
-if __name__ == "__main__":
+def train_vae(vae):
+  
   # データの読み込み
   data = load_data()
   data_mats = []
@@ -119,8 +125,6 @@ if __name__ == "__main__":
   dataset = torch.utils.data.TensorDataset(data_mats)
   dataloader = DataLoader(dataset, batch_size=BATCH, shuffle=True)
 
-  # VAEの初期化
-  vae = VAE()
   optimizer = torch.optim.Adam(vae.parameters(), lr=1e-3)
 
   # 学習
@@ -131,6 +135,21 @@ if __name__ == "__main__":
       loss = criterion(recon_batch, data, mu, logvar)
       loss.backward()
       optimizer.step()
+
+
+if __name__ == "__main__":
+  
+  # データの読み込み
+  data = load_data()
+  data_mats = []
+  for i in range(len(data)):
+    data_mats.append(make_data_mat(data[i]))
+  data_mats = np.array(data_mats) # (人数, 3, NS)
+  data_mats = torch.tensor(data_mats, dtype=torch.float32).view(-1, 3*NS)
+  
+  # VAEの初期化
+  vae = VAE()
+  train_vae(vae)
   
   data_param = load_param()
   true_mat = data_param["sample_data"]
