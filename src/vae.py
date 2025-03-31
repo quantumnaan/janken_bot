@@ -9,21 +9,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle as pk
 import os
+from tqdm import tqdm
 
 from constatants import *
 from utils import *
 
 
 BATCH = 20
-EPOCH = 20
-Z_DIM = 4
+EPOCH = 100
+Z_DIM = 2
 
 class Encoder(nn.Module):
   def __init__(self):
     super(Encoder, self).__init__()
-    self.fc1 = nn.Linear(3*NS, 128)
-    self.fc21 = nn.Linear(128, Z_DIM)  # mean
-    self.fc22 = nn.Linear(128, Z_DIM)  # log variance
+    self.fc1 = nn.Linear(3*NS, 32)
+    self.fc21 = nn.Linear(32, Z_DIM)  # mean
+    self.fc22 = nn.Linear(32, Z_DIM)  # log variance
     self.relu = nn.ReLU()
 
   def forward(self, x):
@@ -39,8 +40,8 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
   def __init__(self):   
     super(Decoder, self).__init__()
-    self.fc1 = nn.Linear(Z_DIM, 128)
-    self.fc2 = nn.Linear(128, 3*NS)
+    self.fc1 = nn.Linear(Z_DIM, 32)
+    self.fc2 = nn.Linear(32, 3*NS)
     self.relu = nn.ReLU()
     self.softmax = nn.Softmax(dim=1)
   
@@ -129,15 +130,13 @@ if __name__ == "__main__":
   optimizer = torch.optim.Adam(vae.parameters(), lr=1e-3)
 
   # 学習
-  for epoch in range(EPOCH):
+  for epoch in tqdm(range(EPOCH)):
     for i, (data,) in enumerate(dataloader):
       optimizer.zero_grad()
       recon_batch, mu, logvar = vae(data)
       loss = criterion(recon_batch, data, mu, logvar)
       loss.backward()
       optimizer.step()
-      if i % 10 == 0:
-        print(f"Epoch {epoch}, Batch {i}, Loss: {loss.item()}")
   
   data_param = load_param()
   true_mat = data_param["sample_data"]
@@ -145,3 +144,14 @@ if __name__ == "__main__":
   print(f"true_mat: \n{true_mat[:,:,human]}")
   pred_mat = vae(data_mats[human].view(1, -1))[0][0].detach().numpy()
   print(f"pred_mat: \n{pred_mat}")
+  
+  zs = np.zeros((len(data), Z_DIM))
+  for i in range(len(data)):
+    zs[i] = vae.encoder(data_mats[i].view(1, -1))[0][0].detach().numpy()
+  
+  ax = plt.subplot(111)
+  ax.set_title("latent space")
+  ax.set_xlabel("z1")
+  ax.set_ylabel("z2")
+  ax.scatter(zs[:,0], zs[:,1])
+  plt.show()

@@ -15,7 +15,7 @@ lambda2_ = 1e-2 # thのestimateでのエントロピー正則化
 lambda4_ = 1e-1
 
 np.random.seed(0) # 乱数固定
-np.set_printoptions(precision=2)
+np.set_printoptions(precision=2, suppress=True) # printの精度設定
 
 # 状態のインデックス対応 (i:(前に出した手，前の勝敗))
 # 0: (グー, 負け), 1: (グー, あいこ), 2: (グー, 勝ち)
