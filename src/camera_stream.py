@@ -48,8 +48,6 @@ def detect_hand_gesture(frame):
   return gesture
     
 def classify_hand_gesture(hand_landmarks):
-  oya_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
-  oya_base = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
   hito_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
   hito_base = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
   naka_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
@@ -58,13 +56,9 @@ def classify_hand_gesture(hand_landmarks):
   kusuri_base = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_MCP]
   ko_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
   ko_base = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
-  wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
-  
-  # hand_vect = np.array([
-    
 
   
-  THRESHOLD = 0.05
+  THRESHOLD = 0.1
   if hito_tip.y - hito_base.y > -THRESHOLD \
       and naka_tip.y - naka_base.y > -THRESHOLD \
       and kusuri_tip.y - kusuri_base.y > -THRESHOLD \

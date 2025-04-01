@@ -29,8 +29,9 @@ async function startGame() {
                 if(response === "Unknown"){
                     alert("手が認識できませんでした．もう一度やり直してください．");
                     i--;
+                }else{
+                    playGame(response);
                 }
-                playGame(response);
             }
         )
     }
@@ -73,8 +74,10 @@ function playGame(playerChoice) {
         alert("勝負が終了しました．リセットします．");
     }
 
+    console.log("cpu: " + computerChoice);
+    console.log("player: " + playerChoice);
     chooseNext(playerChoice, computerChoice);
-    console.log(next_choice);
+    console.log("next_choice: " + next_choice);
 }
 
 function chooseNext(playerChoice, computerChoice) {
@@ -99,7 +102,7 @@ function resetGame() {
     document.getElementById("wld").innerHTML = " ";
     socket.emit('reset');
     socket.emit('save_data');
-    next_choice = 0;
+    next_choice = "グー";
 }
 
 function string2number(str) {
@@ -127,6 +130,8 @@ function number2string(num) {
         return "チョキ";
     } else if (num === 2) {
         return "パー";
+    } else{
+        return "Unknown";
     }
 }
 

@@ -79,8 +79,6 @@ def capture_hand():
     gesture = "チョキ"
   else:
     gesture = "Unknown"
-    
-  print(f"最終的な手は {gesture} です")
   
   # 結果をクライアントに送信
   return gesture
