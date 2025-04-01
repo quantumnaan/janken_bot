@@ -19,11 +19,12 @@ const handImages = {
 const questionImage = "static/img/mark_question.png";
 
 async function startGame() {
+    changeScreen("game-screen");
     resetGame();
 
     for(let i=0; i<maxCount; i++){
         await startGauge();
-        socket.emit("capture_hand", 
+        await socket.emit("capture_hand", 
             function(response) {
                 playerChoice = response;
                 if(response === "Unknown"){
@@ -31,10 +32,13 @@ async function startGame() {
                     i--;
                 }else{
                     playGame(response);
+                    console.log("win" + wins + " lose" + loses + " draw" + draws);
                 }
             }
         )
     }
+    updata_score(wins, draws, loses);
+    changeScreen("result-screen");
     resetGame();
 }
 
@@ -58,26 +62,34 @@ function playGame(playerChoice) {
         loses += 1
     }
     
-    let sum = wins + loses + draws;
     gameResults.push([opponentID, string2number(playerChoice), string2number(computerChoice), string2number(result)]);
-    document.getElementById("scores").innerHTML = `
-        勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
-        負け: ${parseInt(100*parseFloat(loses)/sum)}%, 
-        引き分け: ${parseInt(100*parseFloat(draws)/sum)}%`;
-    document.getElementById("player-hand").src = handImages[playerChoice];
     document.getElementById("computer-hand").src = handImages[computerChoice];
     document.getElementById("wld").innerHTML = result;
-
-    if (gameResults.length === maxCount) {
-        resetGame();
-
-        alert("勝負が終了しました．リセットします．");
-    }
 
     console.log("cpu: " + computerChoice);
     console.log("player: " + playerChoice);
     chooseNext(playerChoice, computerChoice);
     console.log("next_choice: " + next_choice);
+}
+
+function updata_score(wins, draws, loses) {
+    let sum = wins + loses + draws;
+    document.getElementById("scores").innerHTML = `
+        勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
+        負け: ${parseInt(100*parseFloat(loses)/sum)}%, 
+        引き分け: ${parseInt(100*parseFloat(draws)/sum)}%`;
+    if(wins > loses) {
+        document.getElementById("result-message").innerHTML = "あなたの勝ち！";
+        document.getElementById("result-message").style.color = "red";
+    }
+    else if(wins < loses) {
+        document.getElementById("result-message").innerHTML = "あなたの負け！";
+        document.getElementById("result-message").style.color = "blue";
+    }
+    else {
+        document.getElementById("result-message").innerHTML = "引き分け！";
+        document.getElementById("result-message").style.color = "black";
+    }
 }
 
 function chooseNext(playerChoice, computerChoice) {
@@ -96,8 +108,6 @@ function resetGame() {
     draws = 0;
     wins = 0;
     loses = 0;
-    document.getElementById("scores").innerHTML = `勝ち: ${wins}/${maxCount}, 負け: ${loses}/${maxCount}, 引き分け: ${draws}/${maxCount}`;
-    document.getElementById("player-hand").src = questionImage;
     document.getElementById("computer-hand").src = questionImage;
     document.getElementById("wld").innerHTML = " ";
     socket.emit('reset');
@@ -130,8 +140,6 @@ function number2string(num) {
         return "チョキ";
     } else if (num === 2) {
         return "パー";
-    } else{
-        return "Unknown";
     }
 }
 
@@ -161,11 +169,18 @@ function startGauge(){
         let interval = setInterval(function() {
             progress += 2;
             document.getElementById("gauge-bar").style.width = progress + "%";
-            if (progress >= 100) {
+            if (progress > 100) {
                 document.getElementById("gauge-bar").style.width = "0%";
                 clearInterval(interval);
                 resolve();
             }
-        }, 40);
+        }, 60);
     });
+}
+
+function changeScreen(screenId){
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+    });
+    document.getElementById(screenId).classList.add('active');
 }

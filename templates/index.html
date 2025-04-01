@@ -11,18 +11,14 @@
             width: 80%;
             margin: auto;
         }
-        .left-panel {
-            width: 50%;
+        .screen {
+            display: none;
+            text-align: center;
+            margin: auto;
             padding: 20px;
-            text-align: center;
         }
-        .right-panel {
-            width: 50%;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        .active {
+            display: block;
         }
     </style>
     
@@ -30,34 +26,31 @@
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script> <!-- クライアント側JavaScript -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> <!-- CSSスタイルシート -->
 
-
-
 </head>
 
 <body>
-    
-    <div class="game-container">
-        <div class="left-panel">
-            <h1>じゃんけんゲーム</h1>
-            <h3>成績</h3>
-            <ul id="scores"></ul>
-            <button onclick="startGame()">スタート/リセット</button>
+    <div id="title-screen" class="screen active">
+        <h1>じゃんけんゲーム</h1>
+        <button id="start-button" onclick="startGame()">スタート</button>
+    </div>
+    <div id="game-screen" class="screen game-container">
+
+        <h1>じゃんけんゲーム</h1>
+        <div>
+            <p>相手の手</p>
+            <img id="computer-hand" src="{{ url_for('static', filename='img/mark_question.png') }}" alt="相手の手">
         </div>
-    
-        <div class="right-panel">
-            <div>
-                <p>相手の手</p>
-                <img id="computer-hand" src="{{ url_for('static', filename='img/mark_question.png') }}" alt="相手の手">
-            </div>
-            <ul id="wld"></ul>
-            <div>
-                <img id="player-hand" src="{{ url_for('static', filename='img/mark_question.png') }}" alt="あなたの手">
-                <p>あなたの手</p>
-            </div>
-            <div id="gauge-container">
-                <div id="gauge-bar"></div>
-            </div>
+        <div id="gauge-container">
+            <div id="gauge-bar"></div>
         </div>
+        <ul id="wld"></ul>
+
+    </div>
+    <div id="result-screen" class="screen">
+        <h1>結果</h1>
+        <h2 id="result-message"></h2>
+        <ul id="scores"></ul>
+        <button id="restart-button" onclick="changeScreen('title-screen')">タイトルへ</button>
     </div>
 </body>
 </html>

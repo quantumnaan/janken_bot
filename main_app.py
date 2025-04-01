@@ -18,7 +18,7 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 vae = VAE()
 vae.load_model()
-cnt = 0 # プレイした人の数
+cnt_play = 0 # プレイした人の数
 
 ones_data = []
 
@@ -49,16 +49,16 @@ def choose(choices):
 
 @socketio.on("reset")
 def reset():
+  global cnt_play
   if(len(ones_data) > 0):
     ones_data.clear()
-    cnt += 1
-    if(cnt%10==0):{
+    cnt_play = cnt_play + 1
+    if(cnt_play%10==0):
       vae.load_model()
-    }
   
 @socketio.on("save_data")
 def save_data():
-  if False:#(len(ones_data) > 0):
+  if (len(ones_data) > 0):
     with open(file_data, 'ab') as f:
       pk.dump(ones_data, f)
 
