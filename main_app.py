@@ -2,15 +2,14 @@ import numpy as np
 import pickle as pk
 from flask import Flask, render_template, url_for
 from flask_socketio import SocketIO, send
-import cv2
-import base64
+import time
 
 import os
 import sys
 sys.path.append(os.path.abspath("src"))
 
 from vae import VAE
-from camera_stream import detect_hand_gesture
+from camera_stream import capture_hand_one_frame
 from utils import *
 
 file_data = "./data/data.pkl"
@@ -19,10 +18,9 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 vae = VAE()
 vae.load_model()
-cnt = 0
+cnt = 0 # プレイした人の数
 
 ones_data = []
-
 
 @app.route("/")
 def index():
@@ -32,8 +30,8 @@ def index():
 def choose(choices):
   """
   Args:
-    choice: 人が出した手
-    cp_choice: CPが出した手
+    choices['var1']: 人が出した手
+    choices['var2']: CPが出した手
   """
   choice = choices["var1"]
   cp_choice = choices["var2"]
@@ -51,30 +49,40 @@ def choose(choices):
 
 @socketio.on("reset")
 def reset():
-  ones_data.clear()
-  cnt += 1
-  if(cnt%10==0):{
-    vae.load_model()
-  }
+  if(len(ones_data) > 0):
+    ones_data.clear()
+    cnt += 1
+    if(cnt%10==0):{
+      vae.load_model()
+    }
   
 @socketio.on("save_data")
 def save_data():
-  with open(file_data, 'ab') as f:
-    pk.dump(ones_data, f)
-  return "saved"
+  if False:#(len(ones_data) > 0):
+    with open(file_data, 'ab') as f:
+      pk.dump(ones_data, f)
 
-@socketio.on("video_frame")
-def handle_video(data):
-  # 画像データをデコード
-  img_data = base64.b64decode(data['image'])
-  np_arr = np.frombuffer(img_data, np.uint8)
-  frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+@socketio.on("capture_hand")
+def capture_hand():
+  cap_time = 5 # cap_time回撮影し，多数決
   
-  # 手のジェスチャーを検出
-  gesture = detect_hand_gesture(frame)
+  gestures = []
+  for i in range(cap_time):
+    gestures.append(capture_hand_one_frame())
+    time.sleep(0.01) # 10ms待つ
+  print(gestures)
+  
+  if gestures.count("グー") > cap_time / 2:
+    gesture = "グー"
+  elif gestures.count("パー") > cap_time / 2:
+    gesture = "パー"
+  elif gestures.count("チョキ") > cap_time / 2:
+    gesture = "チョキ"
+  else:
+    gesture = "Unknown"
   
   # 結果をクライアントに送信
-  socketio.emit("gesture", {"gesture": gesture})
+  return gesture
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)

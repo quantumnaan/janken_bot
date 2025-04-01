@@ -18,29 +18,28 @@ const handImages = {
 
 const questionImage = "static/img/mark_question.png";
 
-// カメラ用変数と設定
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const context = canvas.getContext('2d');
-const socket = io.connect('http://localhost:5000');
+async function startGame() {
+    resetGame();
 
-navigator.mediaDevices.getUserMedia({ video: true })
-    .then(function(stream) {
-        video.srcObject = stream;
-    });
+    for(let i=0; i<maxCount; i++){
+        await startGauge();
+        let playerChoice = "Unknown";
+        socket.emit("capture_hand", 
+            function(response) {
+                playerChoice = number2string(response);
+            }
+        )
+        if(playerChoice === "Unknown"){
+            alert("手が認識できませんでした．もう一度やり直してください．");
+            i--;
+            continue;
+        }
+        playGame(playerChoice);
+    }
+    resetGame();
+}
 
-setInterval(function() {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const dataURL = canvas.toDataURL('image/png');
-    const base64Image = dataURL.split(',')[1]; // Base64部分を取得
-
-    socket.emit('video_frame', {image:base64Image}); // サーバーに画像を送信
-}, 100); // 100msごとに画像を送信
-
-
+// じゃんけんパート
 function playGame(playerChoice) {
 
     let computerChoice = next_choice;
@@ -96,7 +95,6 @@ function resetGame() {
     draws = 0;
     wins = 0;
     loses = 0;
-    opponentID = generateOpponentID();
     document.getElementById("scores").innerHTML = `勝ち: ${wins}/${maxCount}, 負け: ${loses}/${maxCount}, 引き分け: ${draws}/${maxCount}`;
     document.getElementById("player-hand").src = questionImage;
     document.getElementById("computer-hand").src = questionImage;
@@ -134,8 +132,6 @@ function number2string(num) {
     }
 }
 
-
-
 function sendResultsToSheet() {
     fetch("https://script.google.com/macros/s/AKfycbz1GBmKlrfGWxXjNBxE9XiRWZ6yR6ul0x92qaZJVJicBrdS_qxVRGTuIZ8gV6I7PaVL/exec", {
         method: "POST",
@@ -152,5 +148,21 @@ function sendResultsToSheet() {
     .then(data => alert("データをスプレッドシートに送信しました！"))
     .catch(error => {
         console.error("fetch エラー:", error);
+    });
+}
+
+function startGauge(){
+    let progress = 0;
+    document.getElementById("gauge-bar").style.width = "0%";
+    return new Promise((resolve) => {
+        let interval = setInterval(function() {
+            progress += 2;
+            document.getElementById("gauge-bar").style.width = progress + "%";
+            if (progress >= 100) {
+                document.getElementById("gauge-bar").style.width = "0%";
+                clearInterval(interval);
+                resolve();
+            }
+        }, 40);
     });
 }

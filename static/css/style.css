@@ -1,0 +1,24 @@
+
+#computer-hand {
+  width: 150px;
+  height: 150px;
+  transform: rotate(180deg);
+}
+#player-hand {
+  width: 60px;
+  height: 60px;
+}
+#gauge-container {
+  width: 100%;
+  height: 20px;
+  background-color: #504f4f;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+#gauge-bar {
+  width: 0%;
+  height: 20px;
+  background-color: #31cf36;
+  transition: 100ms;
+}

@@ -2,18 +2,31 @@ import cv2
 import mediapipe as mp
 
 mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
+
+cap = cv2.VideoCapture(0) # カメラのキャプチャ
+
+def capture_hand_one_frame():
+  ret, frame = cap.read() # カメラから1フレームを取得
+  if not ret:
+    print("Error: Could not read frame from camera.")
+    return "Error"
+
+  # 手のジェスチャーを検出
+  gesture = detect_hand_gesture(frame)
+  
+  return gesture
 
 def detect_hand_gesture(frame):
   hands = mp_hands.Hands()
   frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
   results = hands.process(frame_rgb)
 
-  gesture = None
+  gesture = "Unknown"
   if results.multi_hand_landmarks:
     if len(results.multi_hand_landmarks) > 1:
       print("Multiple hands detected, only processing the first one.")
     hand_landmarks = results.multi_hand_landmarks[0]
+
     gesture = classify_hand_gesture(hand_landmarks)
   
   return gesture
