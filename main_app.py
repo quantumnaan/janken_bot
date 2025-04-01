@@ -70,7 +70,6 @@ def capture_hand():
   for i in range(cap_time):
     gestures.append(capture_hand_one_frame())
     time.sleep(0.01) # 10ms待つ
-  print(gestures)
   
   if gestures.count("グー") > cap_time / 2:
     gesture = "グー"
@@ -80,6 +79,8 @@ def capture_hand():
     gesture = "チョキ"
   else:
     gesture = "Unknown"
+    
+  print(f"最終的な手は {gesture} です")
   
   # 結果をクライアントに送信
   return gesture

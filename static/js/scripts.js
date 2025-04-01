@@ -23,18 +23,16 @@ async function startGame() {
 
     for(let i=0; i<maxCount; i++){
         await startGauge();
-        let playerChoice = "Unknown";
         socket.emit("capture_hand", 
             function(response) {
-                playerChoice = number2string(response);
+                playerChoice = response;
+                if(response === "Unknown"){
+                    alert("手が認識できませんでした．もう一度やり直してください．");
+                    i--;
+                }
+                playGame(response);
             }
         )
-        if(playerChoice === "Unknown"){
-            alert("手が認識できませんでした．もう一度やり直してください．");
-            i--;
-            continue;
-        }
-        playGame(playerChoice);
     }
     resetGame();
 }
