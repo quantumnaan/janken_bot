@@ -33,6 +33,7 @@ def choose(choices):
     choices['var1']: 人が出した手
     choices['var2']: CPが出した手
   """
+  global ones_data
   choice = choices["var1"]
   cp_choice = choices["var2"]
   print("いい手を選ぶぞ!")
@@ -49,18 +50,21 @@ def choose(choices):
 
 @socketio.on("reset")
 def reset():
-  global cnt_play
+  global cnt_play, ones_data
   if(len(ones_data) > 0):
     ones_data.clear()
     cnt_play = cnt_play + 1
     if(cnt_play%10==0):
       vae.load_model()
-  
+
 @socketio.on("save_data")
 def save_data():
+  global ones_data
   if (len(ones_data) > 0):
     with open(file_data, 'ab') as f:
       pk.dump(ones_data, f)
+  print(f"{len(ones_data)}ターン分のデータを保存しました")
+  socketio.emit("save_done")
 
 @socketio.on("capture_hand")
 def capture_hand():
@@ -81,7 +85,7 @@ def capture_hand():
     gesture = "Unknown"
   
   # 結果をクライアントに送信
-  return gesture
+  socketio.emit("capture_done", {"gesture": gesture})
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)

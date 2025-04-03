@@ -1,7 +1,7 @@
 
 #computer-hand {
-  width: 200px;
-  height: 200px;
+  width: 280px;
+  height: 280px;
 }
 #wld {
   font-size: 20pt;
@@ -10,16 +10,31 @@
   font-size: 30pt;
 }
 #gauge-container {
-  width: 100%;
+  display: block;   
+  width: 50%;
   height: 20px;
   background-color: #504f4f;
   border-radius: 10px;
   overflow: hidden;
   margin-top: 20px;
+  margin: 20px auto;
 }
 #gauge-bar {
-  width: 0%;
+  width: 0.1%;
   height: 20px;
   background-color: #31cf36;
+  transition: 50ms;
+}
+#progress-container {
+  width: 100%;
+  height: 20px;
+  background-color: #756f6f;
+  border-radius: 10px;
+  overflow: hidden;
+}
+#progress-bar {
+  width: 0%;
+  height: 20px;
+  background-color: #f34e49;
   transition: 50ms;
 }

@@ -98,7 +98,6 @@ def load_data():
         obj.append(pk.load(f))
       except:
         break
-  obj = np.array(obj)
   
   return obj
 
@@ -141,6 +140,7 @@ if __name__ == "__main__":
   
   # データの読み込み
   data = load_data()
+  print(f"data length: {len(data)}")
   data_mats = []
   for i in range(len(data)):
     data_mats.append(make_data_mat(data[i]))

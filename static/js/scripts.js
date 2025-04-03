@@ -2,7 +2,7 @@
 
 const choices = ['グー', 'チョキ', 'パー'];
 let gameResults = [];
-let maxCount = 20;
+let maxCount = 10;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
@@ -10,34 +10,44 @@ let draws = 0;
 let next_choice = "グー";
 var socket = io();
 
+const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));//timeはミリ秒
+
+
 const handImages = {
     "グー": "static/img/janken_gu.png",
     "チョキ": "static/img/janken_choki.png",
-    "パー": "static/img/janken_pa.png"
+    "パー": "static/img/janken_pa.png",
+    "Unknown": "static/img/mark_question.png",
 };
 
-const questionImage = "static/img/mark_question.png";
-
+// ゲームの流れはここで実装
 async function startGame() {
     changeScreen("game-screen");
     resetGame();
 
     for(let i=0; i<maxCount; i++){
+        document.getElementById("progress-bar").style.width = ((100*i)/maxCount)+"%";
         await startGauge();
-        await socket.emit("capture_hand", 
-            function(response) {
-                playerChoice = response;
-                if(response === "Unknown"){
+        document.getElementById("computer-hand").src = handImages[next_choice];
+
+        socket.emit("capture_hand");
+        await new Promise((resolve) => {
+            socket.once('capture_done', (response)=>{
+                playerChoice = response.gesture;
+                if(playerChoice === "Unknown"){
                     alert("手が認識できませんでした．もう一度やり直してください．");
                     i--;
                 }else{
-                    playGame(response);
+                    playGame(playerChoice);
                     console.log("win" + wins + " lose" + loses + " draw" + draws);
                 }
-            }
-        )
+                resolve();
+            });
+        });
     }
-    updata_score(wins, draws, loses);
+
+    await updata_score(wins, draws, loses);
+    await sleep(1000);
     changeScreen("result-screen");
     resetGame();
 }
@@ -63,7 +73,6 @@ function playGame(playerChoice) {
     }
     
     gameResults.push([opponentID, string2number(playerChoice), string2number(computerChoice), string2number(result)]);
-    document.getElementById("computer-hand").src = handImages[computerChoice];
     document.getElementById("wld").innerHTML = result;
 
     console.log("cpu: " + computerChoice);
@@ -103,15 +112,18 @@ function generateOpponentID() {
     return Math.floor(Math.random() * 100000);
 }
 
-function resetGame() {
+async function resetGame() {
     gameResults = [];
     draws = 0;
     wins = 0;
     loses = 0;
-    document.getElementById("computer-hand").src = questionImage;
+    document.getElementById("computer-hand").src = handImages["Unknown"];
     document.getElementById("wld").innerHTML = " ";
-    socket.emit('reset');
     socket.emit('save_data');
+    await new Promise((resolve) => {
+        socket.once('save_done', resolve);
+    });
+    socket.emit('reset');
     next_choice = "グー";
 }
 
@@ -165,6 +177,7 @@ function sendResultsToSheet() {
 function startGauge(){
     let progress = 0;
     document.getElementById("gauge-bar").style.width = "0%";
+    document.getElementById("computer-hand").src = handImages["Unknown"];
     return new Promise((resolve) => {
         let interval = setInterval(function() {
             progress += 2;

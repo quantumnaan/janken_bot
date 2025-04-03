@@ -21,8 +21,8 @@ def make_data_mat(data):
     data_mat: (3, NS) 各状態において各手を何回選んだかの行列
   """
   data_mat = torch.zeros((3, NS))
-  m = data.shape[0]
+  m = len(data)
   for t in range(m-1):
-    state = make_state(data[t,0], data[t,1])
-    data_mat[data[t+1,0]][state] += 1
+    state = make_state(data[t][0], data[t][1])
+    data_mat[data[t+1][0]][state] += 1
   return data_mat

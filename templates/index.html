@@ -7,9 +7,11 @@
     <style>
         button { margin: 5px; padding: 10px; font-size: 16px; }
         .game-container {
-            display: flex;
+            display: block;
             width: 80%;
             margin: auto;
+            justify-content: center;
+            text-align: center;
         }
         .screen {
             display: none;
@@ -35,6 +37,9 @@
     </div>
     <div id="game-screen" class="screen game-container">
 
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
         <h1>じゃんけんゲーム</h1>
         <div>
             <p>相手の手</p>
