@@ -57,6 +57,8 @@ class VAE(nn.Module):
     super(VAE, self).__init__()
     self.encoder = Encoder()
     self.decoder = Decoder()
+    
+    self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
   def forward(self, x):
     z, mu, logvar = self.encoder(x)
@@ -74,6 +76,38 @@ class VAE(nn.Module):
     if os.path.exists(file_model):
       os.remove(file_model)
     torch.save(self.state_dict(), file_model)
+    
+  def train_onedata(self, onedatamat, epoch = EPOCH):
+    """
+    Args:
+      onedata: (1, 3, NS) 各人の手の出し方の行列
+    """
+
+    # 学習
+    for epoch in tqdm(range(epoch)):
+      self.optimizer.zero_grad()
+      recon_batch, mu, logvar = self(onedatamat)
+      loss = criterion(recon_batch, onedatamat, mu, logvar)
+      loss.backward()
+      self.optimizer.step()
+  
+  def train(self, data_mats):
+    """
+    Args:
+      data: (人数, 3, NS) 各人の手の出し方の行列
+    """
+    # DataLoaderの作成
+    dataset = torch.utils.data.TensorDataset(data_mats)
+    dataloader = DataLoader(dataset, batch_size=BATCH, shuffle=True)
+
+    # 学習
+    for epoch in tqdm(range(EPOCH)):
+      for i, (data,) in enumerate(dataloader):
+        self.optimizer.zero_grad()
+        recon_batch, mu, logvar = self(data)
+        loss = criterion(recon_batch, data, mu, logvar)
+        loss.backward()
+        self.optimizer.step()
   
 def criterion(pred_mat, data_mat, mu, logvar):
   """
@@ -109,6 +143,7 @@ def load_param():
   with open(file_data_param, 'rb') as f:
     data = pk.load(f)
   return data
+
 
 def train_vae(vae):
   
@@ -149,13 +184,17 @@ if __name__ == "__main__":
   
   # VAEの初期化
   vae = VAE()
-  train_vae(vae)
+  vae.train(data_mats)
+  # vae.save_model()
   
-  data_param = load_param()
-  true_mat = data_param["sample_data"]
   human = 0
-  print(f"true_mat: \n{true_mat[:,:,human]}")
+  
+  # data_param = load_param()
+  # true_mat = data_param["sample_data"]
+  # print(f"true_mat: \n{true_mat[:,:,human]}")
+  
   pred_mat = vae(data_mats[human].view(1, -1))[0][0].detach().numpy()
+  
   print(f"pred_mat: \n{pred_mat}")
   
   zs = np.zeros((len(data), Z_DIM))

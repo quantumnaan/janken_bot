@@ -39,6 +39,7 @@ def choose(choices):
   print("いい手を選ぶぞ!")
   ones_data.append((choice, cp_choice))
   data_mat = make_data_mat(np.array(ones_data)).view(-1, 3*NS)
+  # vae.train_onedata(data_mat)
   prob_mat = vae(data_mat)[0].view(-1, 3, NS)
   state = make_state(choice, cp_choice)
   prob_next = prob_mat[:, :, state].detach().numpy().flatten()
@@ -64,6 +65,10 @@ def save_data():
     with open(file_data, 'ab') as f:
       pk.dump(ones_data, f)
   print(f"{len(ones_data)}ターン分のデータを保存しました")
+  data_mat = make_data_mat(np.array(ones_data)).view(-1, 3*NS)
+  prob_mat = vae(data_mat)[0].view(-1, 3, NS).detach().numpy()
+  print(f"prob_mat: {prob_mat}")
+  
   socketio.emit("save_done")
 
 @socketio.on("capture_hand")

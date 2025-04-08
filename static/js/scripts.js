@@ -2,7 +2,7 @@
 
 const choices = ['グー', 'チョキ', 'パー'];
 let gameResults = [];
-let maxCount = 10;
+let maxCount = 15;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
@@ -44,6 +44,7 @@ async function startGame() {
                 resolve();
             });
         });
+        await sleep(500);
     }
 
     await updata_score(wins, draws, loses);
