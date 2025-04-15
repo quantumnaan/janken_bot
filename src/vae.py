@@ -16,8 +16,8 @@ from utils import *
 
 
 BATCH = 20
-EPOCH = 100
-Z_DIM = 2
+EPOCH = 20
+Z_DIM = 4
 
 class Encoder(nn.Module):
   def __init__(self):
@@ -64,6 +64,79 @@ class VAE(nn.Module):
     z, mu, logvar = self.encoder(x)
     x_recon = self.decoder(z)
     return x_recon, mu, logvar
+    
+  # def train_onedata(self, onedatamat, epoch = EPOCH):
+  #   """
+  #   Args:
+  #     onedata: (1, 3, NS) 各人の手の出し方の行列
+  #   """
+
+  #   # 学習
+  #   for epoch in tqdm(range(epoch)):
+  #     self.optimizer.zero_grad()
+  #     recon_batch, mu, logvar = self(onedatamat)
+  #     loss = criterion(recon_batch, onedatamat, mu, logvar)
+  #     loss.backward()
+  #     self.optimizer.step()
+  
+  def train(self, data_mats):
+    """
+    Args:
+      data: (人数, 3, NS) 各人の手の出し方の行列
+    """
+    # DataLoaderの作成
+    dataset = torch.utils.data.TensorDataset(data_mats)
+    dataloader = DataLoader(dataset, batch_size=BATCH, shuffle=True)
+
+    # 学習
+    with tqdm(range(EPOCH)) as pbar:
+      for epoch in pbar:
+        for i, (data,) in enumerate(dataloader):
+          self.optimizer.zero_grad()
+          recon_batch, mu, logvar = self(data)
+          loss = criterion(recon_batch, data, mu, logvar)
+          loss.backward()
+          self.optimizer.step()
+        pbar.set_postfix({"loss":loss.item()})
+        
+  def map_z(self, data_mat):
+    """
+    Args:
+      data_mat: (3, NS) 各人の手の出し方の行列
+    Returns:
+      z: (Z_DIM) 潜在変数
+    """
+    z = torch.randn(Z_DIM).view(1, -1)
+    z.requires_grad = True
+    optimizer_z = torch.optim.Adam([z], lr=1e-2)
+    loss_prev = 1e10
+    loss = 1e9
+    # 最適化
+    while abs(loss - loss_prev) > 1e-2:
+      loss_prev = loss
+      optimizer_z.zero_grad()
+      loss = self.loss_map(z, data_mat)
+      loss.backward()
+      optimizer_z.step()
+    
+    return z.detach()
+        
+  def loss_map(self, z, data_mat):
+    """
+    Args:
+      z: (Z_DIM) 潜在変数
+      data_mat: (3, NS) その人の手の出し方の行列
+    Returns:
+      loss: (1) その最小化がMAPに同値になるような目的関数(- log P(x|z) - log P(z))
+    """
+    loss = 0.5* torch.square(z).sum()
+    choice_mat = self.decoder(z).view(3, NS)
+    for i in range(3):
+      for j in range(NS):
+        if data_mat[i][j] != 0:
+          loss += -data_mat[i][j] * torch.log(choice_mat[i][j] + np.spacing(1))
+    return loss
+    
   
   def load_model(self):
     if os.path.exists(file_model):
@@ -76,38 +149,6 @@ class VAE(nn.Module):
     if os.path.exists(file_model):
       os.remove(file_model)
     torch.save(self.state_dict(), file_model)
-    
-  def train_onedata(self, onedatamat, epoch = EPOCH):
-    """
-    Args:
-      onedata: (1, 3, NS) 各人の手の出し方の行列
-    """
-
-    # 学習
-    for epoch in tqdm(range(epoch)):
-      self.optimizer.zero_grad()
-      recon_batch, mu, logvar = self(onedatamat)
-      loss = criterion(recon_batch, onedatamat, mu, logvar)
-      loss.backward()
-      self.optimizer.step()
-  
-  def train(self, data_mats):
-    """
-    Args:
-      data: (人数, 3, NS) 各人の手の出し方の行列
-    """
-    # DataLoaderの作成
-    dataset = torch.utils.data.TensorDataset(data_mats)
-    dataloader = DataLoader(dataset, batch_size=BATCH, shuffle=True)
-
-    # 学習
-    for epoch in tqdm(range(EPOCH)):
-      for i, (data,) in enumerate(dataloader):
-        self.optimizer.zero_grad()
-        recon_batch, mu, logvar = self(data)
-        loss = criterion(recon_batch, data, mu, logvar)
-        loss.backward()
-        self.optimizer.step()
   
 def criterion(pred_mat, data_mat, mu, logvar):
   """
@@ -185,15 +226,18 @@ if __name__ == "__main__":
   # VAEの初期化
   vae = VAE()
   vae.train(data_mats)
-  # vae.save_model()
+  vae.save_model()
   
-  human = 0
+  human = len(data) -1
   
-  # data_param = load_param()
-  # true_mat = data_param["sample_data"]
-  # print(f"true_mat: \n{true_mat[:,:,human]}")
+  data_param = load_param()
+  true_mat = data_param["sample_data"]
+  print(f"true_mat: \n{true_mat[:,:,human]}")
   
-  pred_mat = vae(data_mats[human].view(1, -1))[0][0].detach().numpy()
+  print(f"data_mats: \n{data_mats[human].view(3, NS).detach().numpy()}")
+  
+  z_star = vae.map_z(data_mats[human].view(3,NS))
+  pred_mat = vae.decoder(z_star).view(3, NS).detach().numpy()
   
   print(f"pred_mat: \n{pred_mat}")
   

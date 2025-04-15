@@ -2,7 +2,8 @@
 
 const choices = ['グー', 'チョキ', 'パー'];
 let gameResults = [];
-let maxCount = 15;
+let maxCount = 20;
+let GaugeTime = 1500;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
@@ -188,7 +189,7 @@ function startGauge(){
                 clearInterval(interval);
                 resolve();
             }
-        }, 60);
+        }, GaugeTime / 50);
     });
 }
 

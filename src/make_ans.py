@@ -19,7 +19,7 @@ file_data には以下のデータを保存する
   # return choice1
 
 n = 100 # 人数
-m = 10 # 1人あたりのデータ数 
+m = 20 # 1人あたりのデータ数 
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=3)
 

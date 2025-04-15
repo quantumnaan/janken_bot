@@ -38,9 +38,9 @@ def choose(choices):
   cp_choice = choices["var2"]
   print("いい手を選ぶぞ!")
   ones_data.append((choice, cp_choice))
-  data_mat = make_data_mat(np.array(ones_data)).view(-1, 3*NS)
-  # vae.train_onedata(data_mat)
-  prob_mat = vae(data_mat)[0].view(-1, 3, NS)
+  data_mat = make_data_mat(np.array(ones_data))
+  z_star = vae.map_z(data_mat)
+  prob_mat = vae.decoder(z_star).view(-1, 3, NS)
   state = make_state(choice, cp_choice)
   prob_next = prob_mat[:, :, state].detach().numpy().flatten()
   

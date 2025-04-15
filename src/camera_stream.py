@@ -1,19 +1,15 @@
 import cv2
 import mediapipe as mp
 
-# from hand_detector import HandDetector
 # import pickle as pk
 # import numpy as np
 
-# detector = HandDetector()
-# detector.load_model()
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands()
 mp_drawing = mp.solutions.drawing_utils
 
 cap = cv2.VideoCapture(0) # カメラのキャプチャ
 # OpenCVのウィンドウを作成
-# cv2.namedWindow('Hand Game', cv2.WINDOW_NORMAL)
 
 def capture_hand_one_frame():
   ret, frame = cap.read() # カメラから1フレームを取得
@@ -24,9 +20,6 @@ def capture_hand_one_frame():
   # 手のジェスチャーを検出
   frame = cv2.flip(frame,1)
   gesture = detect_hand_gesture(frame)
-  
-  # cv2.putText(frame, f"Gesture: {gesture}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-  # cv2.imshow("Hand Game", frame)
   
   return gesture
 
@@ -82,3 +75,34 @@ def classify_hand_gesture(hand_landmarks):
 def release_resources():
   cap.release()
   cv2.destroyAllWindows()
+  
+def check_cam():
+  while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+      break
+
+    # BGR → RGBに変換（MediaPipeはRGBで処理）
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # 手を検出
+    results = hands.process(rgb_frame)
+
+    # 手が検出されていれば描画
+    if results.multi_hand_landmarks:
+      for hand_landmarks in results.multi_hand_landmarks:
+        mp_drawing.draw_landmarks(
+            frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+    # 画面に表示
+    cv2.imshow("MediaPipe Hands Test", frame)
+
+    # qキーで終了
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+      break
+
+
+    
+if __name__ == "__main__":
+  check_cam()
+  release_resources()
