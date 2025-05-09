@@ -1,5 +1,7 @@
 import cv2
+import base64
 import mediapipe as mp
+import numpy as np
 
 # import pickle as pk
 # import numpy as np
@@ -23,6 +25,15 @@ def capture_hand_one_frame():
   
   return gesture
 
+def get_picture():
+  ret, frame = cap.read() # カメラから1フレームを取得
+  if not ret:
+    print("Error: Could not read frame from camera.")
+    return "Error"
+
+  _, buffer = cv2.imencode('.jpg', frame)  # JPEG形式にエンコード
+  return buffer.tobytes()  # バイナリ形式で返す
+
 def detect_hand_gesture(frame):
   frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
   results = hands.process(frame_rgb)
@@ -39,33 +50,49 @@ def detect_hand_gesture(frame):
     print("No hands detected.")
   
   return gesture
+
+def calculate_angle(a, b, c):
+  """
+  Args:
+    a: (x, y, z) 
+    b: (x, y, z) 
+    c: (x, y, z) 
+  Returns:
+    angle: (1,) 角度
+  """
+  ba = (a.x - b.x, a.y - b.y, a.z - b.z)
+  bc = (c.x - b.x, c.y - b.y, c.z - b.z)
+  
+  dot_product = ba[0] * bc[0] + ba[1] * bc[1] + ba[2] * bc[2]
+  norm_ba = (ba[0]**2 + ba[1]**2 + ba[2]**2) ** 0.5
+  norm_bc = (bc[0]**2 + bc[1]**2 + bc[2]**2) ** 0.5
+  
+  angle = np.arccos(dot_product / (norm_ba * norm_bc)) * 180 / np.pi
+  
+  return angle
     
 def classify_hand_gesture(hand_landmarks):
+  wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
+  
   hito_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
   hito_base = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
+  
   naka_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
   naka_base = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP]
+  
   kusuri_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
   kusuri_base = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_MCP]
-  ko_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
-  ko_base = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
-
   
-  THRESHOLD = 0.1
-  if hito_tip.y - hito_base.y > -THRESHOLD \
-      and naka_tip.y - naka_base.y > -THRESHOLD \
-      and kusuri_tip.y - kusuri_base.y > -THRESHOLD \
-      and ko_tip.y - ko_base.y > -THRESHOLD:
-    gesture = "グー"
-  elif hito_tip.y - hito_base.y < -THRESHOLD \
-        and naka_tip.y - naka_base.y < -THRESHOLD \
-        and kusuri_tip.y - kusuri_base.y < -THRESHOLD \
-        and ko_tip.y - ko_base.y < -THRESHOLD:
+  hito_angle = calculate_angle(hito_tip, hito_base, wrist)
+  naka_angle = calculate_angle(naka_tip, naka_base, wrist)
+  kusuri_angle = calculate_angle(kusuri_tip, kusuri_base, wrist)
+
+  th_angle = 120
+  if hito_angle > th_angle and naka_angle > th_angle and kusuri_angle > th_angle:
     gesture = "パー"
-  elif hito_tip.y - hito_base.y < -THRESHOLD \
-        and naka_tip.y - naka_base.y < -THRESHOLD \
-        and kusuri_tip.y - kusuri_base.y > -THRESHOLD \
-        and ko_tip.y - ko_base.y > -THRESHOLD:
+  elif hito_angle < th_angle and naka_angle < th_angle and kusuri_angle < th_angle:
+    gesture = "グー"
+  elif hito_angle > th_angle and naka_angle > th_angle and kusuri_angle < th_angle:
     gesture = "チョキ"
   else:
     gesture = "Unknown"
@@ -101,7 +128,20 @@ def check_cam():
     if cv2.waitKey(1) & 0xFF == ord("q"):
       break
 
+def generate_frames():
+  while True:
+    ret, frame = cap.read()  # カメラからフレームを取得
+    if not ret:
+      print("Error: Could not read frame from camera.")
+      break
 
+    # フレームをJPEG形式にエンコード
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame = buffer.tobytes()
+
+    # フレームをHTTPレスポンスとして送信
+    yield (b'--frame\r\n'
+          b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     
 if __name__ == "__main__":
   check_cam()

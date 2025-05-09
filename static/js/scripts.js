@@ -10,6 +10,7 @@ let loses = 0;
 let draws = 0;
 let next_choice = "グー";
 var socket = io();
+let isGameRunning = false;
 
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));//timeはミリ秒
 
@@ -25,8 +26,12 @@ const handImages = {
 async function startGame() {
     changeScreen("game-screen");
     resetGame();
+    isGameRunning = true;
 
     for(let i=0; i<maxCount; i++){
+        if(!isGameRunning) {
+            break;
+        }
         document.getElementById("progress-bar").style.width = ((100*i)/maxCount)+"%";
         await startGauge();
         document.getElementById("computer-hand").src = handImages[next_choice];
@@ -48,10 +53,31 @@ async function startGame() {
         await sleep(500);
     }
 
-    await updata_score(wins, draws, loses);
+    if(!isGameRunning) {
+        return;
+    }
+    await update_score(wins, draws, loses);
     await sleep(1000);
     changeScreen("result-screen");
-    resetGame();
+    resetGame(true);
+}
+
+async function update_picture() {
+    while(true) {
+        socket.emit('update_picture');
+        await new Promise((resolve) => {
+            socket.once('updated_picture', (data) => {
+                const blob = new Blob([data], { type: "image/jpeg" });
+                const url = URL.createObjectURL(blob);
+                const img = document.getElementById("cam-picture");
+                img.src = url;
+                // メモリ解放（必要に応じて）
+                URL.revokeObjectURL(url);
+                resolve();
+            });
+        });
+        await sleep(200);
+    }
 }
 
 // じゃんけんパート
@@ -83,7 +109,7 @@ function playGame(playerChoice) {
     console.log("next_choice: " + next_choice);
 }
 
-function updata_score(wins, draws, loses) {
+function update_score(wins, draws, loses) {
     let sum = wins + loses + draws;
     document.getElementById("scores").innerHTML = `
         勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
@@ -114,17 +140,19 @@ function generateOpponentID() {
     return Math.floor(Math.random() * 100000);
 }
 
-async function resetGame() {
+async function resetGame(save=false) {
     gameResults = [];
     draws = 0;
     wins = 0;
     loses = 0;
     document.getElementById("computer-hand").src = handImages["Unknown"];
     document.getElementById("wld").innerHTML = " ";
-    socket.emit('save_data');
-    await new Promise((resolve) => {
-        socket.once('save_done', resolve);
-    });
+    if(save){
+        socket.emit('save_data');
+        await new Promise((resolve) => {
+            socket.once('save_done', resolve);
+        });
+    }
     socket.emit('reset');
     next_choice = "グー";
 }
@@ -192,6 +220,17 @@ function startGauge(){
         }, GaugeTime / 50);
     });
 }
+
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        if(isGameRunning) {
+            isGameRunning = false;
+            alert("ゲームを中断しました．");
+            changeScreen("title-screen");
+            resetGame();
+        }
+    }
+});
 
 function changeScreen(screenId){
     document.querySelectorAll('.screen').forEach(screen => {
