@@ -16,24 +16,29 @@ from constatants import *
 from utils import *
 
 
-BATCH = 2
-EPOCH = 100
-Z_DIM = 4
+BATCH = 32
+EPOCH = 20
+Z_DIM = 36
 
 class Encoder(nn.Module):
   def __init__(self):
     super(Encoder, self).__init__()
     self.fc1 = nn.Linear(3*NS, 32)
-    self.fc21 = nn.Linear(32, Z_DIM)  # mean
-    self.fc22 = nn.Linear(32, Z_DIM)  # log variance
+    self.fcmu = nn.Linear(32, Z_DIM)  # mean
+    self.fcsig = nn.Linear(32, Z_DIM)  # log variance
     self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
 
   def forward(self, x):
     h1 = self.fc1(x)
-    h1 = self.relu(h1)
-    mu = self.fc21(h1)
-    logvar = self.fc22(h1)
-    
+    # h1 = self.relu(h1)
+    # h1 = self.fc2(h1)
+    # h1 = self.relu(h1)
+    # h1 = self.fc3(h1)
+    h1 = self.sigmoid(h1)
+    mu = self.fcmu(h1)
+    logvar = self.fcsig(h1)
+
     ep = torch.randn_like(mu)
     z = mu + torch.exp(logvar / 2) * ep
     return z, mu, logvar
@@ -59,26 +64,12 @@ class VAE(nn.Module):
     self.encoder = Encoder()
     self.decoder = Decoder()
     
-    self.optimizer = torch.optim.RMSprop(self.parameters(), lr=1e-4)
+    self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
   def forward(self, x):
     z, mu, logvar = self.encoder(x)
     x_recon = self.decoder(z)
     return x_recon, mu, logvar
-    
-  # def train_onedata(self, onedatamat, epoch = EPOCH):
-  #   """
-  #   Args:
-  #     onedata: (1, 3, NS) 各人の手の出し方の行列
-  #   """
-
-  #   # 学習
-  #   for epoch in tqdm(range(epoch)):
-  #     self.optimizer.zero_grad()
-  #     recon_batch, mu, logvar = self(onedatamat)
-  #     loss = criterion(recon_batch, onedatamat, mu, logvar)
-  #     loss.backward()
-  #     self.optimizer.step()
   
   def train(self, data_mats):
     """
@@ -94,8 +85,11 @@ class VAE(nn.Module):
       for epoch in pbar:
         for i, (data,) in enumerate(dataloader):
           self.optimizer.zero_grad()
-          recon_batch, mu, logvar = self(data)
-          loss = criterion(recon_batch, data, mu, logvar)
+          loss = 0
+          MONTE = 3
+          for j in range(MONTE):
+            recon_batch, mu, logvar = self(data)
+            loss += criterion(recon_batch, data, mu, logvar) / MONTE
           loss.backward()
           self.optimizer.step()
         losses.append(loss.item())
@@ -109,43 +103,43 @@ class VAE(nn.Module):
     Returns:
       z: (Z_DIM) 潜在変数
     """
-    z = torch.randn(Z_DIM).view(1, -1)
-    z.requires_grad = True
-    optimizer_z = torch.optim.Adam([z], lr=1e-2)
+    self.z = torch.randn(1, Z_DIM, requires_grad=True)
+    self.data_mat = data_mat
+    self.optimizer_z = torch.optim.LBFGS([self.z], lr=1e-1)
     loss_prev = 1e10
-    loss = 1e9
+    lossv = 1e9
     losses = []
     # 最適化
-    while abs(loss - loss_prev) > 1e-4:
-      loss_prev = loss
-      optimizer_z.zero_grad()
-      loss = self.loss_map(z, data_mat)
-      loss.backward()
-      optimizer_z.step()
-      losses.append(loss.item())
+    while loss_prev - lossv > 1e-5:
+      loss_prev = lossv
+      loss = self.optimizer_z.step(self.closure)
+      lossv = loss.item()
+      losses.append(lossv)
     
     if get_loss:
-      return z.detach(), losses
+      return self.z.detach(), losses
     else:
-      return z.detach()
+      return self.z.detach()
     
       
   def loss_map(self, z, data_mat):
     """
     Args:
-      z: (Z_DIM) 潜在変数
+      z: (1, Z_DIM) 潜在変数
       data_mat: (3, NS) その人の手の出し方の行列
     Returns:
       loss: (1) その最小化がMAPに同値になるような目的関数(- log P(x|z) - log P(z))
     """
-    loss = 0.5* torch.square(z).sum()
+    loss = 0.5* torch.sum(torch.square(z))
     choice_mat = self.decoder(z).view(3, NS)
-    for i in range(3):
-      for j in range(NS):
-        if data_mat[i][j] != 0:
-          loss += -data_mat[i][j] * torch.log(choice_mat[i][j] + np.spacing(1))
+    loss += - torch.sum(data_mat.flatten() * torch.log(choice_mat.flatten() + np.spacing(1)))
     return loss
     
+  def closure(self):
+    self.optimizer_z.zero_grad()
+    loss = self.loss_map(self.z, self.data_mat)
+    loss.backward()
+    return loss
   
   def load_model(self):
     if os.path.exists(file_model):
@@ -170,8 +164,8 @@ def criterion(pred_mat, data_mat, mu, logvar):
   Returns:
     loss: (1,) 誤差
   """
-  BCE = - sum(data_mat.flatten() * torch.log(pred_mat.flatten() + np.spacing(1)))
-  KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+  BCE = - torch.sum(data_mat.flatten() * torch.log(pred_mat.flatten() + np.spacing(1)))
+  KLD = - 0.5 * torch.sum(1 + logvar - torch.pow(mu, 2) - torch.exp(logvar))
   return BCE + KLD
 
 def load_data():
@@ -179,10 +173,11 @@ def load_data():
   
   data = []
   for row in reader:
-    data.append([])
+    data_raw = []
     for i in range(0, len(row), 2):
-      data[-1].append((int(row[i]), int(row[i+1])))
-      
+      data_raw.append((int(row[i]), int(row[i+1])))
+    data.append(data_raw)
+    
   return data
 
 def load_param():
@@ -237,14 +232,18 @@ if __name__ == "__main__":
   losses = vae.train(data_mats)
   vae.save_model()
   
-  human = len(data) -2
-  
-  # data_param = load_param()
-  # true_mat = data_param["sample_data"]
-  # print(f"true_mat: \n{true_mat[:,:,human]}")
+  np.random.seed()
+  human = np.random.randint(0, len(data))
+
+  with open("./data/data_sample_param.csv", 'r') as f:
+    reader = csv.reader(f)
+    true_mats = []
+    for row in reader:
+      true_mats.append(np.array(row, dtype=np.float32).reshape(3, NS))
+  print(f"true_mats: \n{true_mats[human]}")
   
   print(f"data_mats: \n{data_mats[human].view(3, NS).detach().numpy()}")
-  
+
   z_star, losses_map = vae.map_z(data_mats[human].view(3,NS), get_loss=True)
   pred_mat = vae.decoder(z_star).view(3, NS).detach().numpy()
   
@@ -273,5 +272,6 @@ if __name__ == "__main__":
   ax3.set_xlabel("epoch")
   ax3.set_ylabel("loss")
   ax3.plot(losses_map)
+  print(f"loss: {losses_map[-1]}")
   
   plt.show()

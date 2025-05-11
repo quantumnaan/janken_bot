@@ -1,9 +1,10 @@
 
 
 const choices = ['グー', 'チョキ', 'パー'];
+const audio = new Audio('static/audio/janken.wav');
 let gameResults = [];
 let maxCount = 20;
-let GaugeTime = 1500;
+let GaugeTime = 1800;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
@@ -12,6 +13,7 @@ let next_choice = "グー";
 var socket = io();
 let isGameRunning = false;
 
+audio.volume = 1; // 音量を100%に設定
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));//timeはミリ秒
 
 
@@ -33,8 +35,10 @@ async function startGame() {
             break;
         }
         document.getElementById("progress-bar").style.width = ((100*i)/maxCount)+"%";
+        audio.play();
         await startGauge();
         document.getElementById("computer-hand").src = handImages[next_choice];
+        await sleep(100);
 
         socket.emit("capture_hand");
         await new Promise((resolve) => {

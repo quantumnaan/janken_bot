@@ -76,10 +76,10 @@ def reset():
 def save_data():
   global ones_data
   if (len(ones_data) > 0):
-    with open(file_data, 'ab') as f:    
+    with open(file_data, 'a', newline='') as f:
       writer = csv.writer(f)
       # データを書き込む
-      row = np.array(ones_data).astype(np.int8)
+      row = np.array(ones_data, dtype=np.int8)
       writer.writerow(row.flatten())
     print(f"{len(ones_data)}ターン分のデータを保存しました")
     data_mat = make_data_mat(np.array(ones_data)).view(-1, 3*NS)
@@ -88,7 +88,7 @@ def save_data():
     print(f"prob_mat:\n {prob_mat}")
   
     socketio.emit("save_done")
-
+    
 @socketio.on("capture_hand")
 def capture_hand():
   cap_time = 5 # cap_time回撮影し，多数決
