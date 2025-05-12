@@ -1,6 +1,7 @@
 import numpy as np
 import pickle as pk
 import os
+import csv
 
 from constatants import *
 from utils import *
@@ -23,49 +24,41 @@ m = 20 # 1人あたりのデータ数
 np.random.seed(0) # 乱数固定
 np.set_printoptions(precision=3)
 
-ans_mu = (np.random.random(NP)-0.5)*5 # 正解の平均
-ans_Sig = (np.random.random((NP, NP))-0.5)*3
-ans_Sig = ans_Sig @ ans_Sig.T # 正解の共分散行列, 正定値対称行列にする
-ans_params = np.random.multivariate_normal(ans_mu, ans_Sig, size=n).T # 正解のパラメータ
 
-print(f"mu: \n{ans_mu}")
-print(f"Sig: \n{ans_Sig}")
+zs = np.random.randn(NP, n)
 
-ans_transmat = (np.random.rand(3, NS, NP)-0.5) # 正解の変換行列, 手の数3, 状態数6, パラメータ次元3
-ans_transmat[2] = - ans_transmat[0] - ans_transmat[1] # 列和は0(冗長性を削減)
+transmat = (np.random.rand(3, NS, NP)-0.5) # 正解の変換行列, 手の数3, 状態数6, パラメータ次元ZDIM
+transmat = transmat * 2
 
-# データ(手の出し方を表す行列)の生成
-sample_data = ans_transmat @ ans_params
-sample_data = np.exp(sample_data) / np.sum(np.exp(sample_data), axis=0)
+true_mats = transmat @ zs
+true_mats = np.exp(true_mats)
+true_mats = true_mats / np.sum(true_mats, axis=0)
+data_players = []
 
-
-data_ans = {
-  "transmat": ans_transmat,
-  "params": ans_params,
-  "sample_data": sample_data,
-  "mu": ans_mu,
-  "Sig": ans_Sig
-}
-
-with open(file_data_param, 'wb') as f:
-  pk.dump(data_ans, f)
-
-# データ(実際に出した手)の生成
-data_choice = []
 for i in range(n):
-  data_choice.append([])
-  state = np.random.choice(NS)
-  for j in range(m):
-    choice_ij = np.random.choice(3, p=sample_data[:, state, i])
-    cp_choice = np.random.choice(3)
-    data_choice[i].append((choice_ij, cp_choice))
-    state = make_state(choice_ij, cp_choice)
+    state = np.random.randint(0, 9)
+    data = []
+    for j in range(m):
+        choice_cpu = np.random.randint(0, 3)
+        choice_player = np.random.choice([0,1,2], p=true_mats[:,state,i])
+        data.append((choice_player, choice_cpu))
+        state = make_state(choice_player, choice_cpu)
 
-  
-if os.path.exists(file_data):
-  os.remove(file_data)
-for i in range(n):
-  with open(file_data, 'ab') as f:
-    pk.dump(data_choice[i], f)
+    data_players.append(data)
+
+with open("./data/data_sample.csv", 'w', newline='') as f:
+    writer = csv.writer(f)
+    # データを書き込む
+    for i in range(n):
+        row = np.array(data_players[i], dtype=np.int8)
+        writer.writerow(row.flatten())
+
+with open("./data/data_sample_param.csv", 'w', newline='') as f:
+    writer = csv.writer(f)
+    # データを書き込む
+    for i in range(n):
+        row = np.array(true_mats[:,:,i], dtype=np.float32)
+        writer.writerow(row.flatten())
+
   
 print("data saved")
