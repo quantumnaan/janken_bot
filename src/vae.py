@@ -16,9 +16,9 @@ from constatants import *
 from utils import *
 
 
-BATCH = 32
-EPOCH = 20
-Z_DIM = 36
+BATCH = 20
+EPOCH = 100
+Z_DIM = 2
 
 class Encoder(nn.Module):
   def __init__(self):
@@ -170,7 +170,7 @@ def criterion(pred_mat, data_mat, mu, logvar):
 
 def load_data():
   reader = csv.reader(open(file_data, 'r'))
-  
+
   data = []
   for row in reader:
     data_raw = []
@@ -235,7 +235,7 @@ if __name__ == "__main__":
   np.random.seed()
   human = np.random.randint(0, len(data))
 
-  with open("./data/data_sample_param.csv", 'r') as f:
+  with open(file_data_param, 'r') as f:
     reader = csv.reader(f)
     true_mats = []
     for row in reader:
