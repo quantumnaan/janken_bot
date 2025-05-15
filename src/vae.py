@@ -11,14 +11,15 @@ import pickle as pk
 import csv
 import os
 from tqdm import tqdm
+import time
 
 from constatants import *
 from utils import *
 
 
 BATCH = 20
-EPOCH = 100
-Z_DIM = 2
+EPOCH = 300
+Z_DIM = 3
 
 class Encoder(nn.Module):
   def __init__(self):
@@ -229,23 +230,30 @@ if __name__ == "__main__":
   
   # VAEの初期化
   vae = VAE()
+  try:
+    vae.load_model()
+    print("model loaded")
+  except:
+    print("model not found")
   losses = vae.train(data_mats)
   vae.save_model()
   
   np.random.seed()
   human = np.random.randint(0, len(data))
 
-  with open(file_data_param, 'r') as f:
-    reader = csv.reader(f)
-    true_mats = []
-    for row in reader:
-      true_mats.append(np.array(row, dtype=np.float32).reshape(3, NS))
-  print(f"true_mats: \n{true_mats[human]}")
+  # with open(file_data_param, 'r') as f:
+  #   reader = csv.reader(f)
+  #   true_mats = []
+  #   for row in reader:
+  #     true_mats.append(np.array(row, dtype=np.float32).reshape(3, NS))
+  # print(f"true_mats: \n{true_mats[human]}")
   
   print(f"data_mats: \n{data_mats[human].view(3, NS).detach().numpy()}")
 
+  st = time.time()
   z_star, losses_map = vae.map_z(data_mats[human].view(3,NS), get_loss=True)
   pred_mat = vae.decoder(z_star).view(3, NS).detach().numpy()
+  print(f"elapsed time for MAP: {time.time() - st}")
   
   print(f"pred_mat: \n{pred_mat}")
   

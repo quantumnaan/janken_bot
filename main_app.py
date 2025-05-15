@@ -109,6 +109,26 @@ def capture_hand():
   
   # 結果をクライアントに送信
   socketio.emit("capture_done", {"gesture": gesture})
+  
+@socketio.on("calc_minentropy_state")
+def calc_minentropy_state():
+  min_entropy = float("inf")
+  data_mat = make_data_mat(np.array(ones_data))
+  zstar = vae.map_z(data_mat)
+  prob_mat = vae.decoder(zstar).view(3, NS).detach().numpy()
+  min_state = -1
+  for i in range(NS):
+    prob = prob_mat[:, i]
+    entropy_val = entropy(prob)
+    if entropy_val < min_entropy:
+      min_entropy = entropy_val
+      min_state = i
+  prob_ret = prob_mat[:, min_state]
+  prob_ret = [float(x) for x in prob_ret]
+  socketio.emit("calc_minentropy_done", {"state": min_state, "entropy": float(min_entropy), "prob": prob_ret})
+
+def entropy(p):
+  return -np.sum(p * np.log(p + 1e-10))
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)

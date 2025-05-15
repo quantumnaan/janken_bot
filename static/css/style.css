@@ -1,5 +1,5 @@
 html, body {
-  /* overflow: hidden;  */
+  overflow: hidden; 
   height: 100%; /* 高さを100%に設定 */
   margin: 0; /* 余白を削除 */
   padding: 0; /* パディングを削除 */
@@ -9,8 +9,8 @@ h1 {
   padding: 0;
 }
 #computer-hand {
-  width: 280px;
-  height: 280px;
+  width: 330px;
+  height: 330px;
 }
 #wld {
   font-size: 20pt;
@@ -46,18 +46,39 @@ h1 {
   background-color: #f34e49;
   transition: 100ms;
 }
-#left-screen {
+#content-area-game{
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  width: 100vw;
+  justify-content: center;
+}
+#content-area-result{
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  width: 100vw;
+  height: 50vh;
+  justify-content: center;
+}
+.left-screen {
   display: flex;
   flex-direction: column;
-  width: 75%;
+  width: 40%;
   justify-content: center;
   align-items: center;
-  border-radius: 10px;
 }
-#right-screen {
+.center-screen {
   display: flex;
   flex-direction: column;
-  width: 30%; /* 右側の幅を指定 */
+  width: 20%; /* 中央の幅を指定 */
+  justify-content: center;
+  align-items: center;
+}
+.right-screen {
+  display: flex;
+  flex-direction: column;
+  width: 40%; /* 右側の幅を指定 */
   justify-content: center;
   align-items: center;
 }
@@ -94,10 +115,14 @@ h1 {
 }
 .explanation {
   font-size: 1.2rem;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  margin-top: 30px;
+  font-weight: bold;
   color: #f0f0f0;
+  text-decoration: underline rgb(0, 4, 255);
+  text-decoration-thickness: 3px;
 }
-#start-button {
+.button {
   padding: 15px 30px;
   font-size: 1.2rem;
   font-weight: bold;
@@ -108,11 +133,11 @@ h1 {
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
-#start-button:hover {
+.button:hover {
   background-color: #e64a19;
   transform: scale(1.05); /* ホバー時に少し拡大 */
 }
-#start-button:active {
+.button:active {
   transform: scale(0.95); /* クリック時に少し縮小 */
 }
 #cam-picture {
@@ -124,4 +149,43 @@ h1 {
   border-radius: 15px; /* 角を丸くする */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 影を追加 */
   transform: scaleX(-1); /* 左右反転 */
+}
+#result-graph {
+    background: rgba(0,0,0,0.1);
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    margin: 30px auto;
+    display: block;
+    max-width: 90vw;
+}
+#janken-text{
+  background: local;
+  text-shadow: 5px 5px black, 
+                4px 4px white,
+                3px 3px white,
+                2px 2px white;
+  font-weight: bold;
+  -webkit-text-fill-color: transparent;
+}
+.popin-text {
+  font-family: 'Pacifico', cursive;
+  font-size: 3rem;
+  opacity: 0;
+  transform: scale(0.5);
+  animation: popIn 0.5s ease-out forwards;
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
 }

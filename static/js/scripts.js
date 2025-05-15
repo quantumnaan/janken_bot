@@ -4,14 +4,16 @@ const choices = ['グー', 'チョキ', 'パー'];
 const audio = new Audio('static/audio/janken.wav');
 let gameResults = [];
 let maxCount = 20;
-let GaugeTime = 1800;
+let GaugeTime = 1200;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
 let draws = 0;
-let next_choice = "グー";
+let next_choice = choices[Math.floor(Math.random() * choices.length)];
 var socket = io();
 let isGameRunning = false;
+let min_entropy_prob = [0.,0.,0.];
+let min_entropy_state = 0;
 
 audio.volume = 1; // 音量を100%に設定
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));//timeはミリ秒
@@ -24,6 +26,10 @@ const handImages = {
     "Unknown": "static/img/mark_question.png",
 };
 
+
+let resultChart = null;
+let probChart = null;
+
 // ゲームの流れはここで実装
 async function startGame() {
     changeScreen("game-screen");
@@ -35,10 +41,12 @@ async function startGame() {
             break;
         }
         document.getElementById("progress-bar").style.width = ((100*i)/maxCount)+"%";
-        audio.play();
-        await startGauge();
+        document.getElementById("computer-hand").src = handImages["Unknown"];
+        // audio.play();
+        showText(["じゃん", "けん", "ぽん!"]);
+        await sleep(GaugeTime);
         document.getElementById("computer-hand").src = handImages[next_choice];
-        await sleep(100);
+
 
         socket.emit("capture_hand");
         await new Promise((resolve) => {
@@ -54,12 +62,21 @@ async function startGame() {
                 resolve();
             });
         });
-        await sleep(500);
+        await sleep(1500);
     }
 
     if(!isGameRunning) {
         return;
     }
+    socket.emit("calc_minentropy_state");
+    await new Promise((resolve) => {
+        socket.once('calc_minentropy_done', (response)=>{
+            min_entropy_prob = response.prob;
+            min_entropy_state = response.state;
+            console.log("prob: " + response.prob);
+            resolve();
+        });
+    });
     await update_score(wins, draws, loses);
     await sleep(1000);
     changeScreen("result-screen");
@@ -115,10 +132,10 @@ function playGame(playerChoice) {
 
 function update_score(wins, draws, loses) {
     let sum = wins + loses + draws;
-    document.getElementById("scores").innerHTML = `
-        勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
-        負け: ${parseInt(100*parseFloat(loses)/sum)}%, 
-        引き分け: ${parseInt(100*parseFloat(draws)/sum)}%`;
+    // document.getElementById("scores").innerHTML = `
+    //     勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
+    //     負け: ${parseInt(100*parseFloat(loses)/sum)}%, 
+    //     引き分け: ${parseInt(100*parseFloat(draws)/sum)}%`;
     if(wins > loses) {
         document.getElementById("result-message").innerHTML = "あなたの勝ち！";
         document.getElementById("result-message").style.color = "red";
@@ -158,7 +175,7 @@ async function resetGame(save=false) {
         });
     }
     socket.emit('reset');
-    next_choice = "グー";
+    next_choice = choices[Math.floor(Math.random() * choices.length)];
 }
 
 function string2number(str) {
@@ -225,6 +242,130 @@ function startGauge(){
     });
 }
 
+function changeScreen(screenId){
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+    });
+    document.getElementById(screenId).classList.add('active');
+    if(screenId === "result-screen"){
+        if(!(probChart && resultChart)){
+            graphsDefine();
+        }
+        graphUpdate();
+    }
+    document.getElementById("pred-situ").innerHTML = num2state(min_entropy_state);
+}
+
+function graphsDefine(){
+    const ChartOptions = {
+        responsive: true,
+        animation: {
+            duration: 1000,
+            easing: 'easeOutQuad'
+        },
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.2)' },
+                ticks: { color: '#fff' }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: '#fff' }
+            }
+        }
+    };
+
+    const ctx = document.getElementById('result-graph').getContext('2d');
+    resultChart = new Chart(ctx, {
+        type: 'bar', // 棒グラフ
+        data: {
+            labels: ['勝ち', '負け', '引き分け'],
+            datasets: [{
+                label: 'じゃんけん結果',
+                data: [0, 0, 0], // ここを動的に変更可能
+                backgroundColor: [
+                    'rgb(253, 159, 159)',
+                    'rgb(163, 177, 248)',
+                    'rgb(185, 185, 185)'
+                ],
+                borderRadius: 10, // 角丸
+                borderSkipped: false
+            }]
+        },
+        options: ChartOptions
+    });
+
+    const cty = document.getElementById('prob-graph').getContext('2d');
+    probChart = new Chart(cty, {
+        type: 'bar',
+        data: {
+            labels: ['グー', 'チョキ', 'パー'],
+            datasets: [{
+                label: '予測確率',
+                data: [0, 0, 0],
+                backgroundColor: [
+                    'rgb(250, 199, 112)',
+                    'rgb(252, 246, 126)',
+                    'rgb(163, 243, 33)'
+                ],
+                borderRadius: 10, // 角丸
+                borderSkipped: false
+            }]
+        },
+        options: ChartOptions
+    });
+}
+
+function graphUpdate(){
+    probChart.data.datasets[0].data = min_entropy_prob;
+    probChart.update();
+    resultChart.data.datasets[0].data = [wins, loses, draws];
+    resultChart.update();
+}
+
+function num2state(num) {
+    ans = "";
+    if(num/3 == 0){
+        ans = "グー";
+    }else if(num/3 == 1){
+        ans = "チョキ";
+    }else if(num/3 == 2){
+        ans = "パー";
+    }
+    ans += " で ";
+    if(num%3 == 0){
+        ans += "勝った";
+    }else if(num%3 == 1){
+        ans += "負けた";
+    }else if(num%3 == 2){
+        ans += "引き分けた";
+    }
+    ans += "とき"
+    return ans;
+}
+
+
+function showText(words) {
+    times = [500, 500, 800];
+    const elem = document.getElementById("janken-text");
+    elem.style.display = "block";
+    for (let i = 0; i < words.length ; i++) {
+        setTimeout(()=>{
+            elem.textContent = words[i];
+            elem.classList.add("popin-text");
+            elem.style.opacity = 1;
+            setTimeout(() => {
+                elem.style.opacity = 0;
+                elem.classList.remove("popin-text");
+            }, times[i]);
+        }, (i * GaugeTime) / (words.length - 1));
+    }
+}
+
 document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
         if(isGameRunning) {
@@ -235,10 +376,3 @@ document.addEventListener("keydown", function(event) {
         }
     }
 });
-
-function changeScreen(screenId){
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.remove('active');
-    });
-    document.getElementById(screenId).classList.add('active');
-}
