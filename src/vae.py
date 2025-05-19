@@ -104,7 +104,7 @@ class VAE(nn.Module):
     Returns:
       z: (Z_DIM) 潜在変数
     """
-    self.z = torch.randn(1, Z_DIM, requires_grad=True)
+    self.z = torch.zeros(1,Z_DIM, requires_grad=True) #torch.randn(1, Z_DIM, requires_grad=True)
     self.data_mat = data_mat
     self.optimizer_z = torch.optim.LBFGS([self.z], lr=1e-1)
     loss_prev = 1e10
@@ -230,11 +230,7 @@ if __name__ == "__main__":
   
   # VAEの初期化
   vae = VAE()
-  try:
-    vae.load_model()
-    print("model loaded")
-  except:
-    print("model not found")
+  vae.load_model()
   losses = vae.train(data_mats)
   vae.save_model()
   
@@ -254,7 +250,6 @@ if __name__ == "__main__":
   z_star, losses_map = vae.map_z(data_mats[human].view(3,NS), get_loss=True)
   pred_mat = vae.decoder(z_star).view(3, NS).detach().numpy()
   print(f"elapsed time for MAP: {time.time() - st}")
-  
   print(f"pred_mat: \n{pred_mat}")
   
   zs = np.zeros((len(data), Z_DIM))

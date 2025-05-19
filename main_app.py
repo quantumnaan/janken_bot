@@ -12,8 +12,6 @@ from vae import VAE
 from camera_stream import capture_hand_one_frame, get_picture
 from utils import *
 
-# TODO: ゲージたまった少し後，手の認識詰める
-
 file_data = "./data/data.csv"
 
 app = Flask(__name__)
@@ -54,9 +52,9 @@ def choose(choices):
   ones_data.append((choice, cp_choice))
   data_mat = make_data_mat(np.array(ones_data))
   z_star = vae.map_z(data_mat)
-  prob_mat = vae.decoder(z_star).view(-1, 3, NS)
+  prob_mat = vae.decoder(z_star).view(3, NS)
   state = make_state(choice, cp_choice)
-  prob_next = prob_mat[:, :, state].detach().numpy().flatten()
+  prob_next = prob_mat[:, state].detach().numpy().flatten()
   
   print(f"相手の1つ前の手が {choice} で次出す手の確率が {prob_next} だから..")
   choise = (np.argmax(prob_next) + 2 )%3
@@ -82,8 +80,9 @@ def save_data():
       row = np.array(ones_data, dtype=np.int8)
       writer.writerow(row.flatten())
     print(f"{len(ones_data)}ターン分のデータを保存しました")
-    data_mat = make_data_mat(np.array(ones_data)).view(-1, 3*NS)
-    prob_mat = vae(data_mat)[0].view(-1, 3, NS).detach().numpy()
+    data_mat = make_data_mat(np.array(ones_data))
+    zstar = vae.map_z(data_mat)
+    prob_mat = vae.decoder(zstar).view(3, NS).detach().numpy()
     print(f"data_mat:\n {data_mat.view(3, NS).detach().numpy()}\n")
     print(f"prob_mat:\n {prob_mat}")
   
@@ -92,7 +91,6 @@ def save_data():
 @socketio.on("capture_hand")
 def capture_hand():
   cap_time = 5 # cap_time回撮影し，多数決
-  
   gestures = []
   for i in range(cap_time):
     gestures.append(capture_hand_one_frame())
@@ -112,6 +110,7 @@ def capture_hand():
   
 @socketio.on("calc_minentropy_state")
 def calc_minentropy_state():
+  global ones_data
   min_entropy = float("inf")
   data_mat = make_data_mat(np.array(ones_data))
   zstar = vae.map_z(data_mat)
@@ -125,6 +124,7 @@ def calc_minentropy_state():
       min_state = i
   prob_ret = prob_mat[:, min_state]
   prob_ret = [float(x) for x in prob_ret]
+  print(f"最小エントロピーの状態: {min_state}, エントロピー: {min_entropy:.3f}, 確率: {prob_ret}")
   socketio.emit("calc_minentropy_done", {"state": min_state, "entropy": float(min_entropy), "prob": prob_ret})
 
 def entropy(p):

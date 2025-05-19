@@ -4,7 +4,7 @@ const choices = ['グー', 'チョキ', 'パー'];
 const audio = new Audio('static/audio/janken.wav');
 let gameResults = [];
 let maxCount = 20;
-let GaugeTime = 1200;
+let GaugeTime = 1500;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
@@ -40,7 +40,7 @@ async function startGame() {
         if(!isGameRunning) {
             break;
         }
-        document.getElementById("progress-bar").style.width = ((100*i)/maxCount)+"%";
+        document.getElementById("progress-bar").style.width = ((100*i)/(maxCount-1))+"%";
         document.getElementById("computer-hand").src = handImages["Unknown"];
         // audio.play();
         showText(["じゃん", "けん", "ぽん!"]);
@@ -68,6 +68,10 @@ async function startGame() {
     if(!isGameRunning) {
         return;
     }
+    socket.emit('save_data');
+    await new Promise((resolve) => {
+        socket.once('save_done', resolve);
+    });
     socket.emit("calc_minentropy_state");
     await new Promise((resolve) => {
         socket.once('calc_minentropy_done', (response)=>{
@@ -80,7 +84,7 @@ async function startGame() {
     await update_score(wins, draws, loses);
     await sleep(1000);
     changeScreen("result-screen");
-    resetGame(true);
+    resetGame();
 }
 
 async function update_picture() {
@@ -121,7 +125,7 @@ function playGame(playerChoice) {
         loses += 1
     }
     
-    gameResults.push([opponentID, string2number(playerChoice), string2number(computerChoice), string2number(result)]);
+    // gameResults.push([opponentID, string2number(playerChoice), string2number(computerChoice), string2number(result)]);
     document.getElementById("wld").innerHTML = result;
 
     console.log("cpu: " + computerChoice);
@@ -161,19 +165,13 @@ function generateOpponentID() {
     return Math.floor(Math.random() * 100000);
 }
 
-async function resetGame(save=false) {
+async function resetGame() {
     gameResults = [];
     draws = 0;
     wins = 0;
     loses = 0;
     document.getElementById("computer-hand").src = handImages["Unknown"];
     document.getElementById("wld").innerHTML = " ";
-    if(save){
-        socket.emit('save_data');
-        await new Promise((resolve) => {
-            socket.once('save_done', resolve);
-        });
-    }
     socket.emit('reset');
     next_choice = choices[Math.floor(Math.random() * choices.length)];
 }
@@ -185,14 +183,6 @@ function string2number(str) {
         return 1;
     } else if (str === "パー") {
         return 2;
-    }
-
-    if (str === "勝ち") {
-        return 1;
-    } else if (str === "引き分け") {
-        return 0;
-    } else if (str === "負け") {
-        return -1;
     }
 }
 
@@ -329,20 +319,20 @@ function graphUpdate(){
 
 function num2state(num) {
     ans = "";
-    if(num/3 == 0){
+    if(Math.floor(num/3) == 0){
         ans = "グー";
-    }else if(num/3 == 1){
+    }else if(Math.floor(num/3) == 1){
         ans = "チョキ";
-    }else if(num/3 == 2){
+    }else if(Math.floor(num/3) == 2){
         ans = "パー";
     }
     ans += " で ";
     if(num%3 == 0){
-        ans += "勝った";
-    }else if(num%3 == 1){
         ans += "負けた";
-    }else if(num%3 == 2){
+    }else if(num%3 == 1){
         ans += "引き分けた";
+    }else if(num%3 == 2){
+        ans += "勝った";
     }
     ans += "とき"
     return ans;
