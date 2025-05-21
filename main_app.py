@@ -1,3 +1,4 @@
+
 import numpy as np
 import csv
 from flask import Flask, render_template, url_for, jsonify
@@ -13,6 +14,7 @@ from camera_stream import capture_hand_one_frame, get_picture
 from utils import *
 
 file_data = "./data/data.csv"
+file_point_data = "./data/points.csv"
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -20,10 +22,13 @@ vae = VAE()
 vae.load_model()
 cnt_play = 0 # プレイした人の数
 
+points = []
+
 ones_data = []
 
 from flask import Response
 from camera_stream import generate_frames
+
 
 @app.route("/video_feed")
 def video_feed():
@@ -129,6 +134,35 @@ def calc_minentropy_state():
 
 def entropy(p):
   return -np.sum(p * np.log(p + 1e-10))
+
+@app.route("load_points")
+def load_points():
+  global points
+  points = []
+  with open(file_point_data, 'r') as f:
+    reader = csv.reader(f)
+    for row in reader:
+      points.append(row)
+
+  socketio.emit("load_points_done", {"points": points})
+
+@app.route("save_point")
+def save_point(point):
+  with open(file_point_data, 'a', newline='') as f:
+    writer = csv.writer(f)
+    # データを書き込む
+    writer.writerow([point])
+
+@app.route("get_top_percentile")
+def get_top_percentile(point):
+  global points
+  if len(points) == 0:
+    return jsonify({"error": "No points available"})
+  
+  np_points = np.array(points, dtype=np.float32)
+  top_percentile = np_points[np_points>point]/len(points)
+  
+  socketio.emit("get_top_percentile_done", {"top_percentile": top_percentile})
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)

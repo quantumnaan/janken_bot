@@ -45,8 +45,8 @@
         <h1 style="margin-bottom: 30px;">結果</h1>
         <div id="content-area-result">
             <div class="left-screen" style="width: 30%; align-self: end;">
+                <p class="explanation">↓最も予測されやすい状況↓</p>
                 <p id="pred-situ" class="explanation">最も予測されやすい状況</p>
-                <p class="explanation">次に出す手の確率は...</p>
                 <canvas id="prob-graph" width="300" height="200"></canvas>
             </div>
             <div class="center-screen" style="width: 30%; align-self: end;">
@@ -54,7 +54,9 @@
                 <canvas id="result-graph" width="300" height="200"></canvas>
             </div>
             <div class="right-screen" style="width: 30%; align-self: end;">
-                <p id="pred-hand" class="explanation">最も予測されやすい手</p>
+                <p class="explanation">スコアの分布</p>
+                <p id="percentile" class="explanation"></p>
+                <canvas id="pointdist-graph" width="300" height="200"></canvas>
             </div>
         </div>
         <button class="button" style="margin-top: 30px;" onclick="changeScreen('title-screen')">タイトルへ</button>

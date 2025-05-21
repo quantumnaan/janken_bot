@@ -9,6 +9,7 @@ let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
 let draws = 0;
+let points = [];
 let next_choice = choices[Math.floor(Math.random() * choices.length)];
 var socket = io();
 let isGameRunning = false;
@@ -83,6 +84,8 @@ async function startGame() {
     });
     await update_score(wins, draws, loses);
     await sleep(1000);
+    let sum = wins + draws + loses;
+    socket.emit("save_point", (wins - loses)/sum);
     changeScreen("result-screen");
     resetGame();
 }
@@ -174,6 +177,11 @@ async function resetGame() {
     document.getElementById("wld").innerHTML = " ";
     socket.emit('reset');
     next_choice = choices[Math.floor(Math.random() * choices.length)];
+    socket.emit("load_points");
+    socket.once("load_points_done", (response) => {
+        points = response.points;
+        console.log("points: " + points);
+    })
 }
 
 function string2number(str) {
@@ -184,6 +192,17 @@ function string2number(str) {
     } else if (str === "パー") {
         return 2;
     }
+}
+
+function getHistogramData(points, binCount=10) {
+    const bins = Array(binCount).fill(0);
+    const binWidth = 1.0 / binCount;
+    points.forEach(p => {
+        let idx = Math.floor(p / binWidth);
+        if (idx >= binCount) idx = binCount - 1; // 1.0ちょうどは最後のビン
+        bins[idx]++;
+    });
+    return bins;
 }
 
 function number2string(num) {
@@ -308,6 +327,26 @@ function graphsDefine(){
         },
         options: ChartOptions
     });
+
+    const ctz = document.getElementById('pointdist-graph').getContext('2d');
+    probChart = new Chart(cty, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: '分布',
+                data: [],
+                backgroundColor: [
+                    'rgb(250, 199, 112)',
+                    'rgb(252, 246, 126)',
+                    'rgb(163, 243, 33)'
+                ],
+                borderRadius: 10, // 角丸
+                borderSkipped: false
+            }]
+        },
+        options: ChartOptions
+    });
 }
 
 function graphUpdate(){
@@ -334,7 +373,7 @@ function num2state(num) {
     }else if(num%3 == 2){
         ans += "勝った";
     }
-    ans += "とき"
+    ans += "とき、次の手の確率は..."
     return ans;
 }
 
