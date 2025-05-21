@@ -135,34 +135,36 @@ def calc_minentropy_state():
 def entropy(p):
   return -np.sum(p * np.log(p + 1e-10))
 
-@app.route("load_points")
+@socketio.on("load_points")
 def load_points():
   global points
   points = []
   with open(file_point_data, 'r') as f:
     reader = csv.reader(f)
     for row in reader:
-      points.append(row)
+      points.append(float(row[0]))
 
   socketio.emit("load_points_done", {"points": points})
 
-@app.route("save_point")
+@socketio.on("save_point")
 def save_point(point):
   with open(file_point_data, 'a', newline='') as f:
     writer = csv.writer(f)
     # データを書き込む
     writer.writerow([point])
 
-@app.route("get_top_percentile")
+@socketio.on("get_top_percentile")
 def get_top_percentile(point):
   global points
   if len(points) == 0:
     return jsonify({"error": "No points available"})
   
   np_points = np.array(points, dtype=np.float32)
-  top_percentile = np_points[np_points>point]/len(points)
+  top_percentile = np.mean((np_points>point)) * 100
   
-  socketio.emit("get_top_percentile_done", {"top_percentile": top_percentile})
+  print(f"top_percentile: {int(top_percentile)}")
+  
+  socketio.emit("get_top_percentile_done", {"top_percentile": int(top_percentile)})
 
 if __name__ == "__main__":
   socketio.run(app, debug=True)

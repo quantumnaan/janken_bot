@@ -83,7 +83,7 @@ async function startGame() {
         });
     });
     await update_score(wins, draws, loses);
-    await sleep(1000);
+    await sleep(500);
     let sum = wins + draws + loses;
     socket.emit("save_point", (wins - loses)/sum);
     changeScreen("result-screen");
@@ -139,16 +139,12 @@ function playGame(playerChoice) {
 
 function update_score(wins, draws, loses) {
     let sum = wins + loses + draws;
-    // document.getElementById("scores").innerHTML = `
-    //     勝ち: ${parseInt(100*parseFloat(wins)/sum)}%, 
-    //     負け: ${parseInt(100*parseFloat(loses)/sum)}%, 
-    //     引き分け: ${parseInt(100*parseFloat(draws)/sum)}%`;
     if(wins > loses) {
         document.getElementById("result-message").innerHTML = "あなたの勝ち！";
         document.getElementById("result-message").style.color = "red";
     }
     else if(wins < loses) {
-        document.getElementById("result-message").innerHTML = "あなたの負け！";
+        document.getElementById("result-message").innerHTML = "CPUの勝ち！";
         document.getElementById("result-message").style.color = "blue";
     }
     else {
@@ -180,7 +176,6 @@ async function resetGame() {
     socket.emit("load_points");
     socket.once("load_points_done", (response) => {
         points = response.points;
-        console.log("points: " + points);
     })
 }
 
@@ -194,15 +189,31 @@ function string2number(str) {
     }
 }
 
-function getHistogramData(points, binCount=10) {
+function getHistogramData(points0, binCount=11) {
     const bins = Array(binCount).fill(0);
-    const binWidth = 1.0 / binCount;
-    points.forEach(p => {
-        let idx = Math.floor(p / binWidth);
+    const binWidth = 2.0 / binCount; // [-1.0, 1.0]の幅を11分割
+    console.log("points0: ", points0);
+    points0.forEach(p => {
+        // [-1.0, 1.0]を[0, 2.0]にシフトしてビン番号を計算
+        let idx = Math.floor((p + 1.0) / binWidth);
+        if (idx < 0) idx = 0;
         if (idx >= binCount) idx = binCount - 1; // 1.0ちょうどは最後のビン
         bins[idx]++;
     });
-    return bins;
+    
+    let sum = wins + draws + loses;
+    let point = (wins - loses) / sum;
+    let highlightIdx = Math.floor((point + 1.0) / binWidth);
+    if (highlightIdx < 0) highlightIdx = 0;
+    if (highlightIdx >= binCount) highlightIdx = binCount - 1;
+
+    // 色配列を作成
+    const colors = [];
+    for(let i=0; i<binCount; i++){
+        colors.push(i === highlightIdx ? 'red' : 'gray');
+    }
+
+    return [bins, colors];
 }
 
 function number2string(num) {
@@ -262,6 +273,14 @@ function changeScreen(screenId){
         }
         graphUpdate();
     }
+
+    let sum = wins + draws + loses;
+    let point = (wins - loses) / sum;
+    socket.emit("get_top_percentile", point);
+    socket.once("get_top_percentile_done", (response) => {
+        const percentile = response.top_percentile;
+        document.getElementById("percentile").innerHTML = `あなたのスコアは上位 <span style="color:red; font-size: 1.2em;">${percentile}%</span> です！`;
+    });
     document.getElementById("pred-situ").innerHTML = num2state(min_entropy_state);
 }
 
@@ -301,7 +320,7 @@ function graphsDefine(){
                     'rgb(163, 177, 248)',
                     'rgb(185, 185, 185)'
                 ],
-                borderRadius: 10, // 角丸
+                borderRadius: 5, // 角丸
                 borderSkipped: false
             }]
         },
@@ -321,7 +340,7 @@ function graphsDefine(){
                     'rgb(252, 246, 126)',
                     'rgb(163, 243, 33)'
                 ],
-                borderRadius: 10, // 角丸
+                borderRadius: 5, // 角丸
                 borderSkipped: false
             }]
         },
@@ -329,19 +348,14 @@ function graphsDefine(){
     });
 
     const ctz = document.getElementById('pointdist-graph').getContext('2d');
-    probChart = new Chart(cty, {
+    pointDistChart = new Chart(ctz, {
         type: 'bar',
         data: {
             labels: [],
             datasets: [{
                 label: '分布',
                 data: [],
-                backgroundColor: [
-                    'rgb(250, 199, 112)',
-                    'rgb(252, 246, 126)',
-                    'rgb(163, 243, 33)'
-                ],
-                borderRadius: 10, // 角丸
+                borderRadius: 5, // 角丸
                 borderSkipped: false
             }]
         },
@@ -354,6 +368,11 @@ function graphUpdate(){
     probChart.update();
     resultChart.data.datasets[0].data = [wins, loses, draws];
     resultChart.update();
+    const [histogramData, colors] = getHistogramData(points);
+    pointDistChart.data.datasets[0].data = histogramData;
+    pointDistChart.data.datasets[0].backgroundColor = colors;
+    pointDistChart.data.labels = histogramData.map((_, i) => (i * 2.0 / histogramData.length - 1).toFixed(2));
+    pointDistChart.update();
 }
 
 function num2state(num) {

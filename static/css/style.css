@@ -151,7 +151,7 @@ h1 {
 }
 #result-graph {
   background: rgba(0,0,0,0.1);
-  border-radius: 20px;
+  border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   margin: 20px auto;
   display: block;
@@ -159,7 +159,15 @@ h1 {
 }
 #prob-graph {
   background: rgba(0,0,0,0.1);
-  border-radius: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  margin: 20px auto;
+  display: block;
+  max-width: 90vw;
+}
+#pointdist-graph {
+  background: rgba(0,0,0,0.1);
+  border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   margin: 20px auto;
   display: block;
