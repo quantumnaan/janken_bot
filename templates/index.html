@@ -14,8 +14,15 @@
 <body>
     <div id="title-screen" class="screen active">
         <h1 class="title">じゃんけんゲーム</h1>
+        <p class="explanation" style="font-size: 2em;">
+            ～あそびかた～
+        </p>
+        <p class="explanation" style="text-decoration: none;">
+            このゲームは、あなたの手をカメラで認識し、コンピュータとじゃんけんを行います。<br>
+            画面に「じゃん」「けん」「ぽん」と表示が出るのでタイミングよく出してください！
+        </p>
         <button class="button" onclick="startGame()">スタート</button>
-        <p class="explanation" style="margin-top: 30px; margin-bottom: 10px;">↓↓カメラに手が映るようにしてください！↓↓</p>
+        <p class="explanation" style="margin-top: 20px; margin-bottom: 10px;">↓↓カメラに手が映るようにしてください！↓↓</p>
         <img id="cam-picture" src="/video_feed" alt="カメラの映像">
     </div>
 
