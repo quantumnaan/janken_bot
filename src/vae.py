@@ -18,15 +18,19 @@ from utils import *
 
 
 BATCH = 20
-EPOCH = 300
-Z_DIM = 3
+# CVの結果から
+MONTE = 3
+EPOCH = 125
+Z_DIM = 4
+H_DIM = 26
+LR = 0.0088908714321722
 
 class Encoder(nn.Module):
-  def __init__(self):
+  def __init__(self, z_dim=Z_DIM, h_dim=H_DIM):
     super(Encoder, self).__init__()
-    self.fc1 = nn.Linear(3*NS, 32)
-    self.fcmu = nn.Linear(32, Z_DIM)  # mean
-    self.fcsig = nn.Linear(32, Z_DIM)  # log variance
+    self.fc1 = nn.Linear(3*NS, h_dim)
+    self.fcmu = nn.Linear(h_dim, z_dim)  # mean
+    self.fcsig = nn.Linear(h_dim, z_dim)  # log variance
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
 
@@ -45,10 +49,10 @@ class Encoder(nn.Module):
     return z, mu, logvar
         
 class Decoder(nn.Module):
-  def __init__(self):   
+  def __init__(self, z_dim=Z_DIM, h_dim=H_DIM):   
     super(Decoder, self).__init__()
-    self.fc1 = nn.Linear(Z_DIM, 32)
-    self.fc2 = nn.Linear(32, 3*NS)
+    self.fc1 = nn.Linear(z_dim, h_dim)
+    self.fc2 = nn.Linear(h_dim, 3*NS)
     self.relu = nn.ReLU()
     self.softmax = nn.Softmax(dim=1)
   
@@ -60,35 +64,37 @@ class Decoder(nn.Module):
     return x_recon
   
 class VAE(nn.Module):
-  def __init__(self):
+  def __init__(self, z_dim=Z_DIM, h_dim=H_DIM, lr=LR, epoch=EPOCH, monte=MONTE):
     super(VAE, self).__init__()
-    self.encoder = Encoder()
-    self.decoder = Decoder()
-    
-    self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+    self.z_dim = z_dim
+    self.epoch = epoch
+    self.monte = monte
+    self.encoder = Encoder(z_dim, h_dim)
+    self.decoder = Decoder(z_dim, h_dim)
+
+    self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
   def forward(self, x):
     z, mu, logvar = self.encoder(x)
     x_recon = self.decoder(z)
     return x_recon, mu, logvar
   
-  def train(self, data_mats):
+  def train_model(self, data_mats):
     """
     Args:
-      data: (人数, 3, NS) 各人の手の出し方の行列
+      data_mats: (人数, 3, NS) 各人の手の出し方の行列
     """
     # DataLoaderの作成
     dataset = torch.utils.data.TensorDataset(data_mats)
     dataloader = DataLoader(dataset, batch_size=BATCH, shuffle=True)
     losses = []
     # 学習
-    with tqdm(range(EPOCH)) as pbar:
+    with tqdm(range(self.epoch)) as pbar:
       for epoch in pbar:
         for i, (data,) in enumerate(dataloader):
           self.optimizer.zero_grad()
           loss = 0
-          MONTE = 3
-          for j in range(MONTE):
+          for j in range(self.monte):
             recon_batch, mu, logvar = self(data)
             loss += criterion(recon_batch, data, mu, logvar) / MONTE
           loss.backward()
@@ -104,19 +110,23 @@ class VAE(nn.Module):
     Returns:
       z: (Z_DIM) 潜在変数
     """
-    self.z = torch.zeros(1,Z_DIM, requires_grad=True) #torch.randn(1, Z_DIM, requires_grad=True)
+    self.z = torch.zeros(1,self.z_dim, requires_grad=True) #torch.randn(1, Z_DIM, requires_grad=True)
     self.data_mat = data_mat
     self.optimizer_z = torch.optim.LBFGS([self.z], lr=1e-1)
     loss_prev = 1e10
     lossv = 1e9
     losses = []
+    iters = 0
     # 最適化
-    while loss_prev - lossv > 1e-5:
+    while abs(loss_prev - lossv) > 1e-3:
       loss_prev = lossv
-      loss = self.optimizer_z.step(self.closure)
+      loss = self.optimizer_z.step(self.closure) # LBFGSを使うときはclosureを使う
       lossv = loss.item()
       losses.append(lossv)
-    
+      iters += 1
+      if iters > 100:
+        break
+
     if get_loss:
       return self.z.detach(), losses
     else:
@@ -143,16 +153,32 @@ class VAE(nn.Module):
     return loss
   
   def load_model(self):
-    if os.path.exists(file_model):
-      self.load_state_dict(torch.load(file_model))
-      print("model loaded")
-    else:
+    try:
+      if os.path.exists(file_model):
+        self.load_state_dict(torch.load(file_model))
+        print("model loaded")
+    except:
       print("model not found")
       
   def save_model(self):
     if os.path.exists(file_model):
       os.remove(file_model)
     torch.save(self.state_dict(), file_model)
+    
+  def evaluate(self, data_mats):
+    """
+    Args:
+      data_mats: (人数, 3*NS) 各人の手の出し方の行列
+    Returns:
+      loss: (1) その人の手の出し方の行列に対する誤差
+    """
+    losses = []
+    for i in range(len(data_mats)):
+      _, losses_map = self.map_z(data_mats[i].view(3, NS), get_loss=True)
+      loss = losses_map[-1]
+      losses.append(loss)
+    return np.mean(losses)
+      
   
 def criterion(pred_mat, data_mat, mu, logvar):
   """
@@ -167,7 +193,7 @@ def criterion(pred_mat, data_mat, mu, logvar):
   """
   BCE = - torch.sum(data_mat.flatten() * torch.log(pred_mat.flatten() + np.spacing(1)))
   KLD = - 0.5 * torch.sum(1 + logvar - torch.pow(mu, 2) - torch.exp(logvar))
-  return BCE + KLD
+  return (BCE + KLD) / data_mat.shape[0]
 
 def load_data():
   reader = csv.reader(open(file_data, 'r'))
@@ -190,31 +216,18 @@ def load_param():
     data = pk.load(f)
   return data
 
-
-def train_vae(vae):
-  
-  # データの読み込み
-  data = load_data()
+def data_to_mat(data):
+  """
+  Args:
+    data: (人数, 20) (プレイヤーの手, CPUの手)各人の手の出し方の行列
+  Returns:
+    data_mat: (人数, 3*NS) 各人の手の出し方の行列を1次元に変換
+  """
   data_mats = []
   for i in range(len(data)):
     data_mats.append(make_data_mat(data[i]))
-  data_mats = np.array(data_mats) # (人数, 3, NS)
-  data_mats = torch.tensor(data_mats, dtype=torch.float32).view(-1, 3*NS)
-  
-  # DataLoaderの作成
-  dataset = torch.utils.data.TensorDataset(data_mats)
-  dataloader = DataLoader(dataset, batch_size=BATCH, shuffle=True)
+  return np.array(data_mats)
 
-  optimizer = torch.optim.Adam(vae.parameters(), lr=1e-3)
-
-  # 学習
-  for epoch in tqdm(range(EPOCH)):
-    for i, (data,) in enumerate(dataloader):
-      optimizer.zero_grad()
-      recon_batch, mu, logvar = vae(data)
-      loss = criterion(recon_batch, data, mu, logvar)
-      loss.backward()
-      optimizer.step()
 
 
 if __name__ == "__main__":
@@ -231,7 +244,7 @@ if __name__ == "__main__":
   # VAEの初期化
   vae = VAE()
   vae.load_model()
-  losses = vae.train(data_mats)
+  losses = vae.train_model(data_mats)
   vae.save_model()
   
   np.random.seed()

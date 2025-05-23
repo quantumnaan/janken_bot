@@ -2,6 +2,8 @@
 
 const choices = ['グー', 'チョキ', 'パー'];
 const audio = new Audio('static/audio/janken.wav');
+const bgm_title = new Audio('static/audio/bgm_cragy.mp3');
+const bgm_game = new Audio('static/audio/bgm_kyaha.mp3');
 let gameResults = [];
 let maxCount = 20;
 let GaugeTime = 1500;
@@ -17,6 +19,11 @@ let min_entropy_prob = [0.,0.,0.];
 let min_entropy_state = 0;
 
 audio.volume = 1; // 音量を100%に設定
+bgm_game.volume = 0.5; // 音量を50%に設定
+bgm_game.loop = true; // ループ再生を有効にする
+bgm_title.volume = 0.5; // 音量を50%に設定
+bgm_title.loop = true; // ループ再生を有効にする
+
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));//timeはミリ秒
 
 
@@ -30,6 +37,11 @@ const handImages = {
 
 let resultChart = null;
 let probChart = null;
+
+function init(){
+    changeScreen("title-screen");
+    document.getElementById("init-button").style.display = "none";
+}
 
 // ゲームの流れはここで実装
 async function startGame() {
@@ -272,6 +284,21 @@ function changeScreen(screenId){
             graphsDefine();
         }
         graphUpdate();
+    }    
+    
+    if(screenId === "title-screen"){
+        bgm_title.play();
+        bgm_game.pause();
+        bgm_game.currentTime = 0; // 曲の先頭に戻す
+    } else if(screenId === "game-screen"){
+        bgm_title.pause();
+        bgm_title.currentTime = 0; // 曲の先頭に戻す
+        bgm_game.play();
+    }else{
+        bgm_title.pause();
+        bgm_title.currentTime = 0; // 曲の先頭に戻す
+        bgm_game.pause();
+        bgm_game.currentTime = 0; // 曲の先頭に戻す
     }
 
     let sum = wins + draws + loses;
@@ -282,6 +309,8 @@ function changeScreen(screenId){
         document.getElementById("percentile").innerHTML = `あなたのスコアは上位 <span style="color:red; font-size: 1.2em;">${percentile}%</span> です！`;
     });
     document.getElementById("pred-situ").innerHTML = num2state(min_entropy_state);
+    let max_id = min_entropy_prob.indexOf(Math.max(...min_entropy_prob));
+    document.getElementById("pred-result").innerHTML = "➡" + number2string(max_id) +"を出しやすい！";
 }
 
 function graphsDefine(){
@@ -384,7 +413,7 @@ function num2state(num) {
     }else if(Math.floor(num/3) == 2){
         ans = "パー";
     }
-    ans += " で ";
+    ans += "を出して";
     if(num%3 == 0){
         ans += "負けた";
     }else if(num%3 == 1){

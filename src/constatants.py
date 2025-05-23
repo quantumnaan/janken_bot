@@ -4,7 +4,6 @@ file_data_param = "./data/data_sample_param.csv" # [人i:[ターンt:(人iが出
 file_model = "./data/model.pkl"
 
 # NP:パラメータ数，NS:状態数
-NP = 4
 NS = 9
 
 EPS = 1e-12

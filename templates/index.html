@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <button id="init-button" onclick="init()">初期化</button>
     <title>じゃんけんゲーム</title>
     
     <script src="https://cdn.socket.io/4.1.3/socket.io.min.js"></script> <!-- Socket.IO CDN -->
@@ -54,6 +55,7 @@
             <div class="left-screen" style="width: 30%; align-self: end;">
                 <p class="explanation">↓最も予測されやすい状況↓</p>
                 <p id="pred-situ" class="explanation" style="text-decoration: none;"></p>
+                <!-- <p id="pred-result" class="explanation" style="text-decoration: none;"></p> -->
                 <canvas id="prob-graph" width="300" height="200"></canvas>
             </div>
             <div class="center-screen" style="width: 30%; align-self: end;">
