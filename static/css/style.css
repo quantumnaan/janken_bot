@@ -9,8 +9,8 @@ h1 {
   padding: 0;
 }
 #computer-hand {
-  width: 330px;
-  height: 330px;
+  width: 400px;
+  height: 400px;
 }
 #wld {
   font-size: 20pt;
@@ -179,6 +179,7 @@ h1 {
                 4px 4px white,
                 3px 3px white,
                 2px 2px white;
+  font-size: 4em;
   font-weight: bold;
   -webkit-text-fill-color: transparent;
 }

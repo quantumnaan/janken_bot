@@ -20,10 +20,10 @@
         </p>
         <p class="explanation" style="text-decoration: none;">
             このゲームは、あなたの手をカメラで認識し、コンピュータとじゃんけんを行います。<br>
-            画面に「じゃん」「けん」「ぽん」と表示が出るのでタイミングよく出してください！
+            画面に「じゃん」「けん」「ぽん」と表示が出るので「ぽん」で出してください！
         </p>
         <button class="button" onclick="startGame()">スタート</button>
-        <p class="explanation" style="margin-top: 20px; margin-bottom: 10px;">↓↓カメラに手が映るようにしてください！↓↓</p>
+        <p class="explanation" style="margin-top: 20px; margin-bottom: 5px;">↓↓カメラに手が映るようにしてください！↓↓</p>
         <img id="cam-picture" src="/video_feed" alt="カメラの映像">
     </div>
 
@@ -40,8 +40,8 @@
                 <img id="computer-hand" src="{{ url_for('static', filename='img/mark_question.png') }}" alt="相手の手">
             </div>
             <div class="center-screen">
-                <div id="janken-text" style="height: 10%; margin-bottom: 20pt;"></div>
-                <h2 id="wld" style="height: 10%;"> </h2>
+                <div id="janken-text" style="height: 25%; margin-bottom: 20pt;"></div>
+                <h2 id="wld" style="font-size: 3em;"> </h2>
             </div>
             <div class="right-screen">
                 <p class="explanation">あなた</p>
@@ -56,16 +56,16 @@
                 <p class="explanation">↓最も予測されやすい状況↓</p>
                 <p id="pred-situ" class="explanation" style="text-decoration: none;"></p>
                 <!-- <p id="pred-result" class="explanation" style="text-decoration: none;"></p> -->
-                <canvas id="prob-graph" width="300" height="200"></canvas>
+                <canvas id="prob-graph" width="350" height="250"></canvas>
             </div>
             <div class="center-screen" style="width: 30%; align-self: end;">
                 <h2 id="result-message"></h2>
-                <canvas id="result-graph" width="300" height="200"></canvas>
+                <canvas id="result-graph" width="350" height="250"></canvas>
             </div>
             <div class="right-screen" style="width: 30%; align-self: end;">
                 <p class="explanation">スコアの分布</p>
                 <p id="percentile" class="explanation" style="text-decoration: none;"></p>
-                <canvas id="pointdist-graph" width="300" height="200"></canvas>
+                <canvas id="pointdist-graph" width="350" height="250"></canvas>
             </div>
         </div>
         <button class="button" style="margin-top: 30px;" onclick="changeScreen('title-screen')">タイトルへ</button>

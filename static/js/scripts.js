@@ -1,12 +1,11 @@
 
 
 const choices = ['グー', 'チョキ', 'パー'];
-const audio = new Audio('static/audio/janken.wav');
 const bgm_title = new Audio('static/audio/bgm_cragy.mp3');
 const bgm_game = new Audio('static/audio/bgm_kyaha.mp3');
 let gameResults = [];
 let maxCount = 20;
-let GaugeTime = 1500;
+let GaugeTime = 1800;
 let opponentID = generateOpponentID();
 let wins = 0;
 let loses = 0;
@@ -18,7 +17,7 @@ let isGameRunning = false;
 let min_entropy_prob = [0.,0.,0.];
 let min_entropy_state = 0;
 
-audio.volume = 1; // 音量を100%に設定
+
 bgm_game.volume = 0.5; // 音量を50%に設定
 bgm_game.loop = true; // ループ再生を有効にする
 bgm_title.volume = 0.7; // 音量を50%に設定
@@ -75,7 +74,7 @@ async function startGame() {
                 resolve();
             });
         });
-        await sleep(1500);
+        await sleep(1000);
     }
 
     if(!isGameRunning) {
@@ -289,7 +288,6 @@ function changeScreen(screenId){
         });
         document.getElementById("pred-situ").innerHTML = num2state(min_entropy_state);
         let max_id = min_entropy_prob.indexOf(Math.max(...min_entropy_prob));
-        document.getElementById("pred-result").innerHTML = "➡" + number2string(max_id) +"を出しやすい！";
         if(!(probChart && resultChart)){
             graphsDefine();
         }
@@ -310,6 +308,8 @@ function changeScreen(screenId){
         bgm_game.pause();
         bgm_game.currentTime = 0; // 曲の先頭に戻す
     }
+
+    document.getElementById("init-button").style.display = "none";
     
 }
 
