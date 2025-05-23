@@ -21,7 +21,7 @@ let min_entropy_state = 0;
 audio.volume = 1; // 音量を100%に設定
 bgm_game.volume = 0.5; // 音量を50%に設定
 bgm_game.loop = true; // ループ再生を有効にする
-bgm_title.volume = 0.5; // 音量を50%に設定
+bgm_title.volume = 0.7; // 音量を50%に設定
 bgm_title.loop = true; // ループ再生を有効にする
 
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));//timeはミリ秒
@@ -39,8 +39,8 @@ let resultChart = null;
 let probChart = null;
 
 function init(){
-    changeScreen("title-screen");
     document.getElementById("init-button").style.display = "none";
+    changeScreen("title-screen");
 }
 
 // ゲームの流れはここで実装
@@ -280,6 +280,16 @@ function changeScreen(screenId){
     });
     document.getElementById(screenId).classList.add('active');
     if(screenId === "result-screen"){
+        let sum = wins + draws + loses;
+        let point = (wins - loses) / sum;
+        socket.emit("get_top_percentile", point);
+        socket.once("get_top_percentile_done", (response) => {
+            const percentile = response.top_percentile;
+            document.getElementById("percentile").innerHTML = `あなたのスコアは上位 <span style="color:red; font-size: 1.2em;">${percentile}%</span> です！`;
+        });
+        document.getElementById("pred-situ").innerHTML = num2state(min_entropy_state);
+        let max_id = min_entropy_prob.indexOf(Math.max(...min_entropy_prob));
+        document.getElementById("pred-result").innerHTML = "➡" + number2string(max_id) +"を出しやすい！";
         if(!(probChart && resultChart)){
             graphsDefine();
         }
@@ -300,17 +310,7 @@ function changeScreen(screenId){
         bgm_game.pause();
         bgm_game.currentTime = 0; // 曲の先頭に戻す
     }
-
-    let sum = wins + draws + loses;
-    let point = (wins - loses) / sum;
-    socket.emit("get_top_percentile", point);
-    socket.once("get_top_percentile_done", (response) => {
-        const percentile = response.top_percentile;
-        document.getElementById("percentile").innerHTML = `あなたのスコアは上位 <span style="color:red; font-size: 1.2em;">${percentile}%</span> です！`;
-    });
-    document.getElementById("pred-situ").innerHTML = num2state(min_entropy_state);
-    let max_id = min_entropy_prob.indexOf(Math.max(...min_entropy_prob));
-    document.getElementById("pred-result").innerHTML = "➡" + number2string(max_id) +"を出しやすい！";
+    
 }
 
 function graphsDefine(){
